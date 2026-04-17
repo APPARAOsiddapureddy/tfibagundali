@@ -1,0 +1,89 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tfi_postgres
+    environment:
+      POSTGRES_DB: tfibagundali
+      POSTGRES_USER: tfi_user
+      POSTGRES_PASSWORD: tfi_pass
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tfi_user -d tfibagundali']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: tfi_redis
+    ports:
+      - '6379:6379'
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: tfi_server
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://tfi_user:tfi_pass@postgres:5432/tfibagundali
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev_jwt_secret_change_in_prod_256bit
+      JWT_REFRESH_SECRET: dev_refresh_secret_change_in_prod_256bit
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 30d
+      AWS_ACCESS_KEY_ID: your_aws_key
+      AWS_SECRET_ACCESS_KEY: your_aws_secret
+      AWS_REGION: ap-south-1
+      S3_BUCKET: tfibagundali-assets
+      CLOUDFRONT_URL: https://cdn.tfibagundali.in
+      MSG91_AUTH_KEY: your_msg91_key
+      MSG91_SENDER_ID: TFIBAG
+      OTP_BYPASS_CODE: '123456'
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    command: npm run dev
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: tfi_client
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_API_URL: http://localhost:3001/v1
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
+  redis_data:

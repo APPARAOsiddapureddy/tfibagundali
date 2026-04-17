@@ -1,0 +1,5 @@
+-keep class com.example.tfi_bagundali.** { *; }
+-keep class in.tfibagundali.** { *; }
+-keep class com.google.firebase.** { *; }
+-keep class io.flutter.** { *; }
+-dontwarn okhttp3.**
