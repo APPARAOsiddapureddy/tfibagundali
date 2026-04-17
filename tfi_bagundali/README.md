@@ -1,17 +1,33 @@
-# tfi_bagundali
+# TFI Bagundali (Flutter)
 
-A new Flutter project.
+Mobile app for **TFI Bagundali** — daily quiz, share zone, fan army, profile, premium (IAP), and push notifications.
 
-## Getting Started
+## Requirements
 
-This project is a starting point for a Flutter application.
+- Flutter SDK (stable), Dart **>= 3.3**
+- Xcode + CocoaPods for iOS (`cd ios && pod install`)
+- Android Studio / SDK for Android
 
-A few resources to get you started if this is your first Flutter project:
+## Setup
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze lib test
+flutter test
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run
+
+```bash
+flutter run
+```
+
+API base URL is configured in `lib/core/config/app_config.dart` and via `--dart-define=ENV=...` / `API_URL=...`.
+
+## Important
+
+- Do **not** copy a full Flutter SDK into this folder. Use a system-wide Flutter install only.
+- Firebase: add `android/app/google-services.json` and `ios/Runner/GoogleService-Info.plist` locally (not committed if the repo is public and you use private keys).
+
+For the full monorepo (API, web client, Docker), see the **repository root `README.md`**.
