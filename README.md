@@ -14,12 +14,16 @@ Free Telugu cinema fan app — daily TFI updates, quizzes, share cards, fan army
 ## Quick start
 
 ```bash
-# Infrastructure
+# Optional: Docker Postgres (start Docker Desktop first)
 docker compose up -d
 
-# Server
-cd server && cp ../.env.example .env && npm install
-npm run migrate && npm run seed
+# Server — run each line separately (do not paste comment lines into terminal)
+cd server
+cp ../.env.example .env
+npm install
+npm run db:reset    # only if migrate fails (old database schema)
+npm run migrate
+npm run seed
 npm run dev
 
 # Flutter (new terminal)
