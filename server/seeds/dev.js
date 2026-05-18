@@ -1,138 +1,160 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const { pool } = require('../src/config/db');
 
 const HEROES = [
-  { name: 'Pawan Kalyan', telugu_name: 'పవన్ కళ్యాణ్', army_name: 'Power Army', icon_emoji: '🦁', sort_order: 1 },
-  { name: 'Mahesh Babu', telugu_name: 'మహేష్ బాబు', army_name: 'Mahesh Army', icon_emoji: '👑', sort_order: 2 },
-  { name: 'Allu Arjun', telugu_name: 'అల్లు అర్జున్', army_name: 'Bunny Army', icon_emoji: '🔥', sort_order: 3 },
-  { name: 'Ram Charan', telugu_name: 'రామ్ చరణ్', army_name: 'Charan Army', icon_emoji: '⚡', sort_order: 4 },
-  { name: 'Jr. NTR', telugu_name: 'జూనియర్ ఎన్టీఆర్', army_name: 'Young Tiger Army', icon_emoji: '🌊', sort_order: 5 },
-  { name: 'Prabhas', telugu_name: 'ప్రభాస్', army_name: 'Rebel Army', icon_emoji: '🐯', sort_order: 6 },
-  { name: 'Balakrishna', telugu_name: 'బాలకృష్ణ', army_name: 'Nandamuri Sena', icon_emoji: '🦅', sort_order: 7 },
-  { name: 'Chiranjeevi', telugu_name: 'చిరంజీవి', army_name: 'Mega Army', icon_emoji: '🌟', sort_order: 8 },
+  { name: 'Pawan Kalyan', telugu_name: 'పవన్ కళ్యాణ్', icon_emoji: '⚡', sort_order: 1 },
+  { name: 'Mahesh Babu', telugu_name: 'మహేష్ బాబు', icon_emoji: '👑', sort_order: 2 },
+  { name: 'Allu Arjun', telugu_name: 'అల్లు అర్జున్', icon_emoji: '🔥', sort_order: 3 },
+  { name: 'Ram Charan', telugu_name: 'రామ్ చరణ్', icon_emoji: '⚡', sort_order: 4 },
+  { name: 'Jr. NTR', telugu_name: 'జూనియర్ ఎన్టీఆర్', icon_emoji: '🌊', sort_order: 5 },
+  { name: 'Prabhas', telugu_name: 'ప్రభాస్', icon_emoji: '🐯', sort_order: 6 },
+  { name: 'Balakrishna', telugu_name: 'బాలకృష్ణ', icon_emoji: '🦅', sort_order: 7 },
+  { name: 'Chiranjeevi', telugu_name: 'చిరంజీవి', icon_emoji: '🌟', sort_order: 8 },
 ];
-
-const MOVIES = [
-  { title: 'Pushpa 3', title_telugu: 'పుష్ప 3', director: 'Sukumar', release_date: '2025-08-15', genre: 'Mass Action', status: 'upcoming', hero_name: 'Allu Arjun' },
-  { title: 'Devara 2', title_telugu: 'దేవర 2', director: 'Koratala Siva', release_date: '2025-05-03', genre: 'Mass', status: 'upcoming', hero_name: 'Jr. NTR' },
-  { title: 'HHVM', title_telugu: 'హరి హర వీర మల్లు', director: 'Krish Jagarlamudi', release_date: '2025-07-04', genre: 'Period Action', status: 'upcoming', hero_name: 'Pawan Kalyan' },
-  { title: 'Game Changer 2', title_telugu: 'గేమ్ చేంజర్ 2', director: 'Shankar', release_date: '2025-06-18', genre: 'Action', status: 'upcoming', hero_name: 'Ram Charan' },
-  { title: 'Baahubali', title_telugu: 'బాహుబలి', director: 'SS Rajamouli', release_date: '2015-07-10', genre: 'Epic', status: 'released', hero_name: 'Prabhas' },
-  { title: 'RRR', title_telugu: 'ఆర్‌ఆర్‌ఆర్', director: 'SS Rajamouli', release_date: '2022-03-25', genre: 'Period Action', status: 'released', hero_name: 'Jr. NTR' },
-  { title: 'Pushpa', title_telugu: 'పుష్ప', director: 'Sukumar', release_date: '2021-12-17', genre: 'Mass Action', status: 'released', hero_name: 'Allu Arjun' },
-  { title: 'Magadheera', title_telugu: 'మాగధీర', director: 'SS Rajamouli', release_date: '2009-07-31', genre: 'Fantasy Action', status: 'released', hero_name: 'Ram Charan' },
-];
-
-const QUIZ_QUESTIONS = [
-  { question_text: "Ee movie lo 'Naatu Naatu' song vasindi?", question_telugu: "ఈ మూవీలో 'నాటు నాటు' సాంగ్ వచ్చింది?", type: 'song_clue', difficulty: 'easy', option_a: 'Baahubali', option_b: 'RRR', option_c: 'Pushpa', option_d: 'Magadheera', correct_option: 'b', coins_reward: 3 },
-  { question_text: 'Mahesh Babu hero ga first movie?', question_telugu: 'మహేష్ బాబు హీరోగా మొదటి మూవీ?', type: 'hero_silhouette', difficulty: 'medium', option_a: 'Raja Kumarudu', option_b: 'Neeku Naaku Naidu', option_c: 'Murari', option_d: 'Okkadu', correct_option: 'a', coins_reward: 4 },
-  { question_text: "Pushpa lo hero enti?", question_telugu: "పుష్పలో హీరో ఎంటి?", type: 'movie_still', difficulty: 'easy', option_a: 'Mahesh', option_b: 'Allu Arjun', option_c: 'NTR', option_d: 'Prabhas', correct_option: 'b', coins_reward: 3 },
-  { question_text: "Baahubali movie lo villain enti?", question_telugu: "బాహుబలి మూవీలో విలన్ ఎంటి?", type: 'movie_still', difficulty: 'medium', option_a: 'Rana Daggubati', option_b: 'Sonu Sood', option_c: 'Nassar', option_d: 'Prakash Raj', correct_option: 'a', coins_reward: 4 },
-  { question_text: "RRR movie release year enti?", question_telugu: "RRR మూవీ రిలీజ్ ఇయర్ ఎంటి?", type: 'release_year', difficulty: 'easy', option_a: '2020', option_b: '2021', option_c: '2022', option_d: '2023', correct_option: 'c', coins_reward: 3 },
-  { question_text: "SS Rajamouli director ga first blockbuster?", type: 'dialogue', difficulty: 'hard', option_a: 'Magadheera', option_b: 'Vikramarkudu', option_c: 'Student No 1', option_d: 'Simhadri', correct_option: 'a', coins_reward: 5 },
-  { question_text: "Pawan Kalyan real name enti?", type: 'hero_silhouette', difficulty: 'medium', option_a: 'Konidela Kalyan Babu', option_b: 'Siva Shankar Vara Prasad', option_c: 'Harikrishna', option_d: 'Nandamuri', correct_option: 'b', coins_reward: 4 },
-  { question_text: "'Naatu Naatu' Oscar winner movie?", type: 'song_clue', difficulty: 'easy', option_a: 'Baahubali', option_b: 'Pushpa', option_c: 'RRR', option_d: 'KGF', correct_option: 'c', coins_reward: 3 },
-  { question_text: "Allu Arjun grandfather enti?", type: 'hero_silhouette', difficulty: 'hard', option_a: 'Allu Ramalingaiah', option_b: 'ANR', option_c: 'NTR', option_d: 'Chiranjeevi', correct_option: 'a', coins_reward: 5 },
-  { question_text: "Chiranjeevi 150th movie?", type: 'movie_still', difficulty: 'medium', option_a: 'Khaidi No 150', option_b: 'Godfather', option_c: 'Acharya', option_d: 'Sye Raa', correct_option: 'a', coins_reward: 4 },
-  { question_text: "Baahubali - The Beginning release year?", type: 'release_year', difficulty: 'easy', option_a: '2013', option_b: '2014', option_c: '2015', option_d: '2016', correct_option: 'c', coins_reward: 3 },
-  { question_text: "Jr. NTR full name enti?", type: 'dialogue', difficulty: 'medium', option_a: 'Nandamuri Taraka Rama Rao', option_b: 'Nandamuri Tarak', option_c: 'Nandamuri Harikrishna', option_d: 'Nandamuri Balakrishna', correct_option: 'a', coins_reward: 4 },
-  { question_text: "Pushpa movie director enti?", type: 'movie_still', difficulty: 'easy', option_a: 'Trivikram', option_b: 'Sukumar', option_c: 'Harish Shankar', option_d: 'Anil Ravipudi', correct_option: 'b', coins_reward: 3 },
-  { question_text: "Devara movie villain enti?", type: 'movie_still', difficulty: 'medium', option_a: 'Rana', option_b: 'Siddharth', option_c: 'Saif Ali Khan', option_d: 'Ajay Devgn', correct_option: 'c', coins_reward: 4 },
-  { question_text: "Magadheera heroine enti?", type: 'movie_still', difficulty: 'easy', option_a: 'Kajal Agarwal', option_b: 'Tamannaah', option_c: 'Anushka', option_d: 'Samantha', correct_option: 'a', coins_reward: 3 },
-];
-
-const SHARE_CARDS = [
-  { title: 'Power Star Morning Status', category: 'hero_status', is_premium: false },
-  { title: 'Pushpa 3 Countdown Card', category: 'countdown', is_premium: false },
-  { title: 'Iconic Dialogue Card', category: 'dialogue', is_premium: false },
-  { title: 'Mahesh B-Day Special', category: 'birthday', is_premium: true },
-  { title: 'Bunny Army Flag 2025', category: 'fan_army', is_premium: false },
-  { title: 'NTR Tiger Status Pack', category: 'hero_status', is_premium: true },
-  { title: 'Baahubali Anniversary', category: 'anniversary', is_premium: false },
-  { title: 'RRR Dialogue Telugu', category: 'dialogue', is_premium: false },
-];
-
-const POLL = {
-  question: 'Best mass hero of the decade — yevaru?',
-  options: [
-    { id: 'a', label: 'Pawan Kalyan', vote_count: 0 },
-    { id: 'b', label: 'Mahesh Babu', vote_count: 0 },
-    { id: 'c', label: 'Allu Arjun', vote_count: 0 },
-    { id: 'd', label: 'Jr. NTR', vote_count: 0 },
-  ],
-  starts_at: new Date().toISOString(),
-  ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-};
 
 async function seed() {
-  console.log('🌱 Seeding database...');
-
-  // Insert heroes
+  console.log('🌱 Seeding TFI Bagundali v2...');
   const heroMap = {};
+
   for (const h of HEROES) {
     const { rows } = await pool.query(
-      `INSERT INTO heroes (name, telugu_name, army_name, icon_emoji, sort_order)
+      `INSERT INTO heroes (name, telugu_name, icon_emoji, sort_order, bio)
        VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING id, name`,
-      [h.name, h.telugu_name, h.army_name, h.icon_emoji, h.sort_order]
+      [h.name, h.telugu_name, h.icon_emoji, h.sort_order, `${h.name} — Telugu cinema icon.`]
     );
-    if (rows[0]) {
-      heroMap[h.name] = rows[0].id;
-      // Create fan army
+    if (rows[0]) heroMap[h.name] = rows[0].id;
+  }
+  if (!Object.keys(heroMap).length) {
+    const { rows } = await pool.query('SELECT id, name FROM heroes');
+    rows.forEach(r => { heroMap[r.name] = r.id; });
+  }
+
+  const rcId = heroMap['Ram Charan'];
+  const pkId = heroMap['Pawan Kalyan'];
+  const aaId = heroMap['Allu Arjun'];
+  const ntrId = heroMap['Jr. NTR'];
+
+  const { rows: peddiRows } = await pool.query(
+    `INSERT INTO movies (title, title_telugu, hero_id, director, genre, release_date, status, synopsis)
+     VALUES ('Peddi','పెద్ది',$1,'Buchi Babu Sana','Action Drama','2026-06-04','upcoming',
+     'Ram Charan''s Peddi is set for a grand theatrical release.')
+     ON CONFLICT DO NOTHING RETURNING id`,
+    [rcId]
+  );
+  const peddiId = peddiRows[0]?.id;
+
+  await pool.query(
+    `INSERT INTO movies (title, title_telugu, hero_id, director, genre, release_date, status) VALUES
+     ('Devara 2','దేవర 2',$1,'Koratala Siva','Mass','2026-05-03','upcoming'),
+     ('Pushpa 3','పుష్ప 3',$2,'Sukumar','Mass Action','2026-08-15','upcoming'),
+     ('Spirit','స్పిరిట్',$3,'Sandeep Reddy Vanga','Action','2026-09-01','upcoming')
+     ON CONFLICT DO NOTHING`,
+    [ntrId, aaId, pkId]
+  );
+
+  if (peddiId) {
+    const timeline = [
+      ['Movie announced', 'done', 1],
+      ['Launch event completed', 'done', 2],
+      ['Shooting started', 'done', 3],
+      ['First look released', 'done', 4],
+      ['Release date announced', 'current', 5],
+      ['Trailer coming soon', 'pending', 6],
+      ['Pre-release event', 'pending', 7],
+      ['Release day', 'pending', 8],
+    ];
+    for (const [label, status, order] of timeline) {
       await pool.query(
-        `INSERT INTO fan_armies (hero_id, army_name) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
-        [rows[0].id, h.army_name]
+        `INSERT INTO movie_timeline (movie_id, label, status, sort_order) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
+        [peddiId, label, status, order]
       );
     }
   }
-  console.log('✅ Heroes seeded:', Object.keys(heroMap).length);
 
-  // Insert movies
-  const movieMap = {};
-  for (const m of MOVIES) {
-    const heroId = heroMap[m.hero_name];
-    const { rows } = await pool.query(
-      `INSERT INTO movies (title, title_telugu, hero_id, director, release_date, genre, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING RETURNING id, title`,
-      [m.title, m.title_telugu, heroId || null, m.director, m.release_date, m.genre, m.status]
-    );
-    if (rows[0]) movieMap[m.title] = rows[0].id;
-  }
-  console.log('✅ Movies seeded:', Object.keys(movieMap).length);
-
-  // Insert quiz questions
-  let qCount = 0;
-  for (const q of QUIZ_QUESTIONS) {
-    const { rowCount } = await pool.query(
-      `INSERT INTO quiz_questions (question_text, question_telugu, type, difficulty, option_a, option_b, option_c, option_d, correct_option, coins_reward)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT DO NOTHING`,
-      [q.question_text, q.question_telugu || null, q.type, q.difficulty, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.coins_reward]
-    );
-    qCount += rowCount;
-  }
-  console.log('✅ Quiz questions seeded:', qCount);
-
-  // Insert share cards
-  let cardCount = 0;
-  for (const c of SHARE_CARDS) {
-    const { rowCount } = await pool.query(
-      `INSERT INTO share_cards (title, category, image_s3_key, is_premium, is_active, publish_date)
-       VALUES ($1,$2,$3,$4,TRUE,CURRENT_DATE) ON CONFLICT DO NOTHING`,
-      [c.title, c.category, `share-cards/${c.category}/placeholder.jpg`, c.is_premium]
-    );
-    cardCount += rowCount;
-  }
-  console.log('✅ Share cards seeded:', cardCount);
-
-  // Insert poll
   await pool.query(
-    `INSERT INTO polls (question, options, starts_at, ends_at, is_active)
-     VALUES ($1,$2,$3,$4,TRUE) ON CONFLICT DO NOTHING`,
-    [POLL.question, JSON.stringify(POLL.options), POLL.starts_at, POLL.ends_at]
+    `INSERT INTO tfi_updates (title, summary, body, category, trust_status, hero_id, movie_id, priority, is_breaking, is_trending, reaction_fire, reaction_mass, reaction_love, reaction_wait, published_at) VALUES
+     ('Peddi locks June 4 release 🔥',
+      'Ram Charan''s Peddi is set for a grand theatrical release. Fans are already marking their calendars.',
+      'Official announcement confirms June 4 theatrical release for Peddi.',
+      'release', 'official', $1, $2, 'breaking', TRUE, TRUE, 12400, 8100, 5600, 4700, NOW() - INTERVAL '2 hours'),
+     ('Big trailer launch event expected soon',
+      'Fans are waiting for an official announcement on the trailer drop.',
+      'Industry buzz around a major trailer event this week.',
+      'trailer', 'media_report', $1, $2, 'trending', FALSE, TRUE, 4800, 3200, 2100, 1800, NOW() - INTERVAL '1 hour'),
+     ('First single dropping this Friday',
+      'Music lovers are excited for the first single from the upcoming album.',
+      NULL, 'song', 'verified', $3, NULL, 'normal', FALSE, TRUE, 3200, 2100, 1500, 900, NOW() - INTERVAL '4 hours'),
+     ('New hero-director combo creating buzz',
+      'A fresh collaboration is trending across fan circles.',
+      NULL, 'collab', 'buzz', $4, NULL, 'normal', FALSE, TRUE, 2100, 1800, 900, 1200, NOW() - INTERVAL '6 hours')
+     ON CONFLICT DO NOTHING`,
+    [rcId, peddiId, aaId, pkId]
   );
-  console.log('✅ Poll seeded');
 
+  const questions = [
+    ['"Taggede Le" dialogue ye movie lo undi?', 'డైలాగ్ ఏ మూవీలో?', 'dialogue', 'easy', 'Pushpa', 'Arya', 'Julayi', 'Race Gurram', 'a'],
+    ['RRR release year enti?', 'RRR రిలీజ్ ఇయర్?', 'release_year', 'easy', '2020', '2021', '2022', '2023', 'c'],
+    ['Pushpa lo hero enti?', 'పుష్పలో హీరో?', 'movie', 'easy', 'Mahesh', 'Allu Arjun', 'NTR', 'Prabhas', 'b'],
+  ];
+  const qIds = [];
+  for (const q of questions) {
+    const { rows } = await pool.query(
+      `INSERT INTO quiz_questions (question_text, question_telugu, type, difficulty, option_a, option_b, option_c, option_d, correct_option)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      q
+    );
+    if (rows[0]) qIds.push(rows[0].id);
+  }
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Kolkata' });
+  if (qIds.length) {
+    await pool.query(
+      `INSERT INTO daily_quiz_sets (quiz_date, question_ids) VALUES ($1, $2)
+       ON CONFLICT (quiz_date) DO NOTHING`,
+      [today, qIds]
+    );
+  }
+
+  await pool.query(
+    `INSERT INTO polls (question, poll_type, options, ends_at, movie_id) VALUES
+     ('Most awaited upcoming movie this month?', 'normal',
+      '[{"id":"a","label":"Peddi","vote_count":4200},{"id":"b","label":"Devara 2","vote_count":3100},{"id":"c","label":"Pushpa 3","vote_count":2800},{"id":"d","label":"Spirit","vote_count":1900}]'::jsonb,
+      NOW() + INTERVAL '7 days', $1),
+     ('One word for Peddi update?', 'word',
+      '[{"id":"a","label":"Mass","vote_count":1200},{"id":"b","label":"Fire","vote_count":980},{"id":"c","label":"Goosebumps","vote_count":760},{"id":"d","label":"Waiting","vote_count":540}]'::jsonb,
+      NOW() + INTERVAL '3 days', $1)
+     ON CONFLICT DO NOTHING`,
+    [peddiId]
+  );
+
+  const wallpapers = [
+    ['Ram Charan Mass Wallpaper', 'hero', rcId, '🎬'],
+    ['PK Attitude Status', 'hero', pkId, '⚡'],
+    ['NTR Fire Wallpaper', 'hero', ntrId, '🌊'],
+    ['Peddi Countdown', 'countdown', rcId, '🔥'],
+  ];
+  for (const [title, cat, heroId, emoji] of wallpapers) {
+    await pool.query(
+      `INSERT INTO wallpapers (title, category, hero_id, image_url, is_trending)
+       VALUES ($1,$2,$3,$4,TRUE) ON CONFLICT DO NOTHING`,
+      [title, cat, heroId, `https://placehold.co/400x800/121622/FFB545?text=${encodeURIComponent(emoji)}`]
+    );
+  }
+
+  const cards = [
+    ['RC Mass Status Card', 'hero_status', rcId],
+    ['Peddi Countdown Card', 'countdown', rcId],
+    ['PK Power Status', 'hero_status', pkId],
+  ];
+  for (const [title, cat, heroId] of cards) {
+    await pool.query(
+      `INSERT INTO status_cards (title, category, hero_id, image_url, is_trending)
+       VALUES ($1,$2,$3,'https://placehold.co/400x600/1A1F2E/FF6B21?text=Card',TRUE) ON CONFLICT DO NOTHING`,
+      [title, cat, heroId]
+    );
+  }
+
+  console.log('✅ Seed complete');
   await pool.end();
-  console.log('\n🎉 Seed complete!');
 }
 
-seed().catch(err => { console.error('Seed failed:', err); process.exit(1); });
+seed().catch(e => { console.error(e); process.exit(1); });

@@ -1,126 +1,101 @@
-const crypto = require('crypto');
-const queries = require('./auth.queries');
-const { generateOtp, hashOtp, hashToken, sendOtpSms } = require('../../utils/otp');
-const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../../utils/jwt');
-const { AppError } = require('../../middleware/error.middleware');
-const { redis } = require('../../config/redis');
+const db = require('../../config/db');
 const env = require('../../config/env');
-const coinService = require('../coins/coins.service');
-const { COIN_RULES } = require('../../utils/coins');
+const { generateOtp, hashOtp, hashToken, sendOtpSms } = require('../../utils/otp');
+const { signAccess, signRefresh } = require('../../utils/jwt');
+const { AppError } = require('../../middleware/error.middleware');
 
 async function sendOtp(phone) {
-  const rateLimitKey = `ratelimit:otp:${phone}`;
-  const count = await redis.incr(rateLimitKey);
-  if (count === 1) await redis.expire(rateLimitKey, 600);
-  if (count > 3) throw new AppError('Too many OTP requests. Wait 10 minutes.', 429, 'RATE_LIMITED');
-
-  const otp = env.OTP_BYPASS_CODE || generateOtp();
-  const codeHash = hashOtp(otp);
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-  await queries.saveOtp(phone, codeHash, expiresAt);
-  await sendOtpSms(phone, otp);
-
-  return { message: 'OTP sent successfully' };
+  const normalized = phone.replace(/\D/g, '').slice(-10);
+  if (normalized.length !== 10) throw new AppError('Invalid phone number', 400, 'INVALID_PHONE');
+  const fullPhone = `+91${normalized}`;
+  const code = env.OTP_BYPASS_CODE && env.NODE_ENV === 'development'
+    ? env.OTP_BYPASS_CODE
+    : generateOtp();
+  const expires = new Date(Date.now() + 10 * 60 * 1000);
+  await db.query(
+    `INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES ($1, $2, $3)`,
+    [fullPhone, hashOtp(code), expires]
+  );
+  await sendOtpSms(fullPhone, code);
+  return { phone: fullPhone, expires_in: 600 };
 }
 
-async function verifyOtp(phone, code, deviceId) {
-  const otpRecord = await queries.findValidOtp(phone);
-  if (!otpRecord) throw new AppError('OTP expired or not found', 400, 'OTP_EXPIRED');
-
-  if (otpRecord.attempts >= 3) throw new AppError('Too many wrong attempts', 429, 'OTP_MAX_ATTEMPTS');
-
-  const isMatch = otpRecord.code_hash === hashOtp(code);
-  if (!isMatch) {
-    await queries.incrementOtpAttempts(otpRecord.id);
-    throw new AppError('Invalid OTP', 400, 'OTP_INVALID');
+async function verifyOtp(phone, code) {
+  const fullPhone = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
+  const { rows } = await db.query(
+    `SELECT * FROM otp_codes WHERE phone = $1 AND used = FALSE ORDER BY created_at DESC LIMIT 1`,
+    [fullPhone]
+  );
+  const otp = rows[0];
+  if (!otp || otp.expires_at < new Date()) throw new AppError('OTP expired', 400, 'OTP_EXPIRED');
+  if (otp.attempts >= 5) throw new AppError('Too many attempts', 429, 'OTP_LOCKED');
+  const valid = hashOtp(code) === otp.code_hash || (env.OTP_BYPASS_CODE && code === env.OTP_BYPASS_CODE);
+  if (!valid) {
+    await db.query('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = $1', [otp.id]);
+    throw new AppError('Invalid OTP', 400, 'INVALID_OTP');
   }
+  await db.query('UPDATE otp_codes SET used = TRUE WHERE id = $1', [otp.id]);
 
-  await queries.markOtpUsed(otpRecord.id);
-
-  let user = await queries.findUserByPhone(phone);
-  const isNewUser = !user;
-  if (isNewUser) {
-    user = await queries.createUser(phone);
+  let userRows = await db.query('SELECT * FROM users WHERE phone = $1', [fullPhone]);
+  if (!userRows.rows.length) {
+    userRows = await db.query(
+      `INSERT INTO users (phone, display_name) VALUES ($1, $2) RETURNING *`,
+      [fullPhone, 'TFI Fan']
+    );
+  } else {
+    await db.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [userRows.rows[0].id]);
   }
-
-  await queries.updateLastLogin(user.id);
-
-  // Award daily login coins (idempotent via Redis key)
-  const loginKey = `daily:login:${user.id}:${new Date().toISOString().slice(0, 10)}`;
-  const alreadyAwarded = await redis.exists(loginKey);
-  if (!alreadyAwarded) {
-    await coinService.awardCoins(user.id, COIN_RULES.DAILY_LOGIN, 'daily_login', null, 'Daily login bonus');
-    await redis.setex(loginKey, 86400, '1');
-  }
-
-  const accessToken = signAccessToken(user);
-  const refreshToken = signRefreshToken(user.id);
-  const tokenHash = hashToken(refreshToken);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-  await queries.saveRefreshToken(user.id, tokenHash, deviceId, expiresAt);
-
-  const coinBalance = await coinService.getBalance(user.id);
-
+  const user = userRows.rows[0];
+  const access = signAccess({ sub: user.id, phone: user.phone });
+  const refresh = signRefresh({ sub: user.id });
+  const refreshHash = hashToken(refresh);
+  await db.query(
+    `INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '30 days')`,
+    [user.id, refreshHash]
+  );
   return {
-    access_token: accessToken,
-    refresh_token: refreshToken,
-    user: {
-      id: user.id,
-      phone: user.phone,
-      username: user.username,
-      display_name: user.display_name,
-      is_new_user: isNewUser,
-      is_premium: user.is_premium,
-      coin_balance: coinBalance,
-    },
+    user: formatUser(user),
+    access_token: access,
+    refresh_token: refresh,
+    is_new_user: !user.favourite_hero_id,
   };
 }
 
-async function refreshTokens(refreshToken) {
-  let payload;
-  try {
-    payload = verifyRefreshToken(refreshToken);
-  } catch (_) {
-    throw new AppError('Invalid refresh token', 401, 'TOKEN_INVALID');
-  }
-
-  const tokenHash = hashToken(refreshToken);
-  const record = await queries.findRefreshToken(tokenHash);
-  if (!record) throw new AppError('Refresh token not found or expired', 401, 'TOKEN_INVALID');
-
-  const user = await queries.findUserById(payload.sub);
-  if (!user) throw new AppError('User not found', 401, 'USER_NOT_FOUND');
-
-  await queries.deleteRefreshToken(tokenHash);
-
-  const newAccessToken = signAccessToken(user);
-  const newRefreshToken = signRefreshToken(user.id);
-  const newHash = hashToken(newRefreshToken);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-  await queries.saveRefreshToken(user.id, newHash, record.device_id, expiresAt);
-
-  return { access_token: newAccessToken, refresh_token: newRefreshToken };
-}
-
-async function logout(refreshToken) {
-  const tokenHash = hashToken(refreshToken);
-  await queries.deleteRefreshToken(tokenHash);
-}
-
 async function getMe(userId) {
-  const user = await queries.findUserById(userId);
-  if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
-  const coinBalance = await coinService.getBalance(userId);
-  return { ...user, coin_balance: coinBalance };
+  const { rows } = await db.query(
+    `SELECT u.*, h.name as hero_name, h.telugu_name as hero_telugu, h.icon_emoji
+     FROM users u LEFT JOIN heroes h ON h.id = u.favourite_hero_id WHERE u.id = $1`,
+    [userId]
+  );
+  if (!rows.length) throw new AppError('User not found', 404, 'NOT_FOUND');
+  return formatUser(rows[0]);
 }
 
 async function updateMe(userId, fields) {
-  const allowed = ['display_name', 'username', 'region', 'fcm_token', 'avatar_hero_id'];
-  const filtered = Object.fromEntries(Object.entries(fields).filter(([k]) => allowed.includes(k)));
-  return queries.updateUser(userId, filtered);
+  const allowed = ['display_name', 'favourite_hero_id', 'fcm_token'];
+  const sets = [];
+  const vals = [];
+  let i = 1;
+  for (const key of allowed) {
+    if (fields[key] !== undefined) {
+      sets.push(`${key} = $${i++}`);
+      vals.push(fields[key]);
+    }
+  }
+  if (!sets.length) return getMe(userId);
+  vals.push(userId);
+  await db.query(`UPDATE users SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${i}`, vals);
+  return getMe(userId);
 }
 
-module.exports = { sendOtp, verifyOtp, refreshTokens, logout, getMe, updateMe };
+function formatUser(u) {
+  return {
+    id: u.id,
+    phone: u.phone,
+    display_name: u.display_name,
+    favourite_hero_id: u.favourite_hero_id,
+    favourite_hero: u.hero_name ? { name: u.hero_name, telugu_name: u.hero_telugu, icon_emoji: u.icon_emoji } : null,
+  };
+}
+
+module.exports = { sendOtp, verifyOtp, getMe, updateMe };

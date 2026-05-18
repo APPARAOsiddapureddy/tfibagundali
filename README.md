@@ -1,81 +1,53 @@
 # TFI Bagundali
 
-Telugu-first fan engagement stack: **Node.js** API, **Vite + React** web client, and **Docker** for local infra.
+**Mana Cinema. Mana Updates. Mana Pride.**
 
-**Repository:** [github.com/APPARAOsiddapureddy/tfibagundali](https://github.com/APPARAOsiddapureddy/tfibagundali)
+Free Telugu cinema fan app — daily TFI updates, quizzes, share cards, fan army, and profile.
 
----
+## Stack
 
-## Repository layout
-
-| Path | Description |
-|------|-------------|
-| `server/` | Express API, PostgreSQL migrations, Redis, jobs. |
-| `client/` | Vite + React web UI. |
-| `docker-compose.yml` | Postgres, Redis, API wiring for local dev. |
-| `start.sh` | Helper script to bring services up. |
-
----
-
-## Prerequisites
-
-- **Node.js** 18+ (for `server/` and `client/`)
-- **PostgreSQL** & **Redis** (or use Docker Compose)
-
----
+| Path | Tech |
+|------|------|
+| `mobile/` | **Flutter** (iOS, Android, Web) — primary app |
+| `server/` | Node.js + Express + PostgreSQL |
 
 ## Quick start
 
-### Backend (API)
-
 ```bash
-cd server
-cp .env.example .env   # edit DATABASE_URL, JWT secrets, etc.
-npm install
-node src/server.js     # or npm start — see server/package.json
-```
-
-Default API port is often **3001** (see `server` config / `.env`).
-
-### Web client
-
-```bash
-cd client
-npm install
-npm run dev
-```
-
-### Docker (full stack)
-
-From repo root:
-
-```bash
+# Infrastructure
 docker compose up -d
+
+# Server
+cd server && cp ../.env.example .env && npm install
+npm run migrate && npm run seed
+npm run dev
+
+# Flutter (new terminal)
+cd mobile && flutter pub get && flutter run -d chrome
 ```
 
-Adjust services per `docker-compose.yml` and your `.env` files.
+- **API:** http://localhost:3001  
+- **Dev OTP:** `123456` (see [Testing login](#testing-login) below)
 
----
+## Testing login
 
-## Configuration & secrets
+With the API running in **development** (`NODE_ENV=development` in `.env`):
 
-- **Never commit** `.env` files. Root `.gitignore` excludes them.
-- Copy **`.env.example`** (where present) and fill in DB, JWT, SMS, S3, etc.
+| Step | What to do |
+|------|------------|
+| Phone | Any valid **10-digit** Indian number (e.g. `9876543291` — pre-filled in the Flutter login screen) |
+| Send OTP | Tap **Send OTP** — no real SMS is sent |
+| OTP | Enter **`123456`** (from `OTP_BYPASS_CODE` in `.env.example`) |
+| Server log | Terminal running `npm run dev` prints `📱 OTP for +91…: 123456` |
+| New user | After verify → pick a fan army → Home |
+| Returning user | Same phone + `123456` → Home |
 
----
+**Requirements:** PostgreSQL up, `npm run migrate` + `npm run seed`, JWT secrets set (256-bit strings in `.env`).
 
-## Git branches
+## Product
 
-Default branch: **`main`**.
+- **Tabs:** Home · Quiz · Share · Army · Profile  
+- **Design:** Fire/gold cinema theme, 8 hero armies, missions, trust badges  
+- **API:** Auth, home feed, quiz, polls, explore, profile (`/v1`)
 
-```bash
-git add -A
-git commit -m "Your message"
-git push origin main
-```
-
----
-
-## License
-
-Proprietary / internal unless you add an explicit OSS license.
+See `mobile/README.md` for Flutter testing and platform API URLs.
