@@ -7,6 +7,6 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: SplashScreen()));
     expect(find.text('TFI'), findsOneWidget);
     expect(find.text('BAGUNDALI'), findsOneWidget);
-    expect(find.textContaining('MANA CINEMA'), findsOneWidget);
+    expect(find.textContaining('CONTENT-FIRST'), findsOneWidget);
   });
 }

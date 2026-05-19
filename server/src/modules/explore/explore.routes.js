@@ -1,21 +1,24 @@
 const router = require('express').Router();
 const service = require('./explore.service');
+const wallpapersSvc = require('../wallpapers/wallpapers.service');
+const cardsSvc = require('../status-cards/status-cards.service');
+const { optionalAuth } = require('../../middleware/auth.middleware');
 
-router.get('/', async (req, res, next) => {
+router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    res.json({ success: true, data: await service.getExplore() });
+    res.json({ success: true, data: await service.getExplore(req.user?.id) });
   } catch (e) { next(e); }
 });
 
-router.get('/wallpapers', async (req, res, next) => {
+router.get('/wallpapers', optionalAuth, async (req, res, next) => {
   try {
-    res.json({ success: true, data: await service.listWallpapers(req.query.category) });
+    res.json({ success: true, data: await wallpapersSvc.list({ category: req.query.category }) });
   } catch (e) { next(e); }
 });
 
-router.get('/status-cards', async (req, res, next) => {
+router.get('/status-cards', optionalAuth, async (req, res, next) => {
   try {
-    res.json({ success: true, data: await service.listCards(req.query.category) });
+    res.json({ success: true, data: await cardsSvc.list({ category: req.query.category }) });
   } catch (e) { next(e); }
 });
 

@@ -15,19 +15,31 @@ const quizRoutes = require('./modules/quiz/quiz.routes');
 const pollsRoutes = require('./modules/polls/polls.routes');
 const exploreRoutes = require('./modules/explore/explore.routes');
 const profileRoutes = require('./modules/profile/profile.routes');
+const recommendationsRoutes = require('./modules/recommendations/recommendations.routes');
+const wallpapersRoutes = require('./modules/wallpapers/wallpapers.routes');
+const statusCardsRoutes = require('./modules/status-cards/status-cards.routes');
+const remindersRoutes = require('./modules/reminders/reminders.routes');
+const searchRoutes = require('./modules/search/search.routes');
+const notificationsRoutes = require('./modules/notifications/notifications.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
+const recController = require('./modules/recommendations/recommendations.controller');
+const { optionalAuth } = require('./middleware/auth.middleware');
 
 const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
-  origin: env.ALLOWED_ORIGINS.split(',').map(o => o.trim()),
+  origin: env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()),
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(compression());
 if (env.NODE_ENV !== 'test') app.use(morgan('[:date[iso]] :method :url :status :response-time ms'));
 
-app.get('/health', (req, res) => res.json({ status: 'ok', app: 'TFI Bagundali', version: '2.0.0' }));
+app.get('/health', (req, res) => res.json({
+  success: true,
+  data: { status: 'ok', app: 'TFI Bagundali', version: '2.1.0' },
+}));
 
 app.use('/v1/auth', authRoutes);
 app.use('/v1/home', homeRoutes);
@@ -38,6 +50,14 @@ app.use('/v1/quiz', quizRoutes);
 app.use('/v1/polls', pollsRoutes);
 app.use('/v1/explore', exploreRoutes);
 app.use('/v1/profile', profileRoutes);
+app.use('/v1/wallpapers', wallpapersRoutes);
+app.use('/v1/status-cards', statusCardsRoutes);
+app.use('/v1/reminders', remindersRoutes);
+app.use('/v1/search', searchRoutes);
+app.use('/v1/notifications', notificationsRoutes);
+app.use('/v1/recommendations', recommendationsRoutes);
+app.use('/v1/admin', adminRoutes);
+app.post('/v1/events', optionalAuth, recController.postEvent);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Route not found', statusCode: 404 } });

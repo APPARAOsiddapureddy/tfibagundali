@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'core/providers/auth_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/services/fcm_service.dart';
 import 'core/theme/app_theme.dart';
 
 class TfiBagundaliApp extends StatefulWidget {
@@ -22,8 +23,9 @@ class _TfiBagundaliAppState extends State<TfiBagundaliApp> {
     super.initState();
     _auth = AuthProvider();
     _router = createRouter(_auth);
-    Future.delayed(const Duration(milliseconds: 2200), () async {
+    Future.delayed(const Duration(milliseconds: 1800), () async {
       await _auth.bootstrap();
+      await FcmService.init(_auth);
     });
   }
 

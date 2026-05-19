@@ -8,7 +8,13 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = ['Language', 'Notifications', 'Privacy', 'Terms', 'About TFI'];
+    final items = [
+      ('Notifications', '/profile/notification-preferences'),
+      ('Language', null),
+      ('Privacy', null),
+      ('Terms', null),
+      ('About TFI', null),
+    ];
     return TfiScreen(
       child: Column(
         children: [
@@ -26,17 +32,19 @@ class SettingsScreen extends StatelessWidget {
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: items.length,
-              itemBuilder: (_, i) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: TfiCard(
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(items[i], style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w600))),
-                      const Icon(Icons.chevron_right, color: TfiTokens.textFaint),
-                    ],
+              itemBuilder: (_, i) {
+                final item = items[i];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: TfiCard(
+                    child: ListTile(
+                      title: Text(item.$1, style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w600)),
+                      trailing: const Icon(Icons.chevron_right, color: TfiTokens.textFaint),
+                      onTap: item.$2 != null ? () => context.push(item.$2!) : null,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],

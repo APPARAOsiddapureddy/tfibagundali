@@ -3,17 +3,32 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../data/army_data.dart';
 import '../../widgets/tfi_widgets.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  Future<void> _logout(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Log out')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    await context.read<AuthProvider>().logout();
+    if (context.mounted) context.go('/login');
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final armyKey = auth.user?['hero_army_key'] as String? ?? ArmyData.keys.first;
-    final army = ArmyData.get(armyKey);
+    final user = auth.user;
+    final hero = user?.favouriteHero;
 
     return TfiScreen(
       child: CustomScrollView(
@@ -22,7 +37,10 @@ class ProfileScreen extends StatelessWidget {
             child: TfiTopBar(
               title: 'PROFILE',
               trailing: [
-                GestureDetector(onTap: () => context.push('/settings'), child: const Icon(Icons.settings_outlined, color: TfiTokens.textHi)),
+                GestureDetector(
+                  onTap: () => context.push('/settings'),
+                  child: const Icon(Icons.settings_outlined, color: TfiTokens.textHi),
+                ),
               ],
             ),
           ),
@@ -31,67 +49,39 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  HeroAvatar(armyKey: armyKey, size: 80),
-                  const SizedBox(height: 12),
-                  Text(auth.user?['display_name'] as String? ?? 'TFI Fan', style: TfiTokens.display(28, color: TfiTokens.textHi)),
-                  Text('${army.name} Army · Member since 2025', style: TfiTokens.body(13, color: TfiTokens.textLo)),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(child: _metric('${auth.user?['coins'] ?? 240}', 'COINS', TfiTokens.gold)),
-                      const SizedBox(width: 10),
-                      Expanded(child: _metric('${auth.user?['army_points'] ?? 1240}', 'ARMY PTS', army.color)),
-                      const SizedBox(width: 10),
-                      Expanded(child: _metric('#12', 'RANK', TfiTokens.fire)),
-                    ],
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: TfiTokens.bg2,
+                    child: Text(hero?.iconEmoji ?? '⭐', style: const TextStyle(fontSize: 36)),
                   ),
+                  const SizedBox(height: 12),
+                  Text(auth.displayName, style: TfiTokens.display(26, color: TfiTokens.textHi)),
+                  Text(user?.phone ?? '', style: TfiTokens.body(13, color: TfiTokens.textLo)),
+                  if (hero != null) ...[
+                    const SizedBox(height: 8),
+                    TfiChip(label: 'Favourite: ${hero.name}', color: TfiTokens.fire),
+                  ],
                 ],
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SectionTitle(title: 'ACTIVITY'),
-            ),
-          ),
           SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (_, i) => Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: TfiCard(
-                  child: Row(
-                    children: [
-                      Text(['🎯', '📢', '⚔️'][i % 3], style: const TextStyle(fontSize: 22)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(['Quiz completed', 'Shared update', 'Army vote'][i % 3], style: TfiTokens.body(14, color: TfiTokens.textHi, w: FontWeight.w600)),
-                            Text('2 days ago', style: TfiTokens.body(11, color: TfiTokens.textLo)),
-                          ],
-                        ),
-                      ),
-                      Text('+${[50, 30, 20][i % 3]}', style: TfiTokens.body(13, color: TfiTokens.gold, w: FontWeight.w800)),
-                    ],
-                  ),
-                ),
-              ),
-              childCount: 3,
-            ),
+            delegate: SliverChildListDelegate([
+              _tile(context, Icons.star_outline, 'Favourite hero', () => context.push('/profile/favourite-hero')),
+              _tile(context, Icons.bookmark_outline, 'Saved content', () => context.push('/profile/saved')),
+              _tile(context, Icons.alarm, 'Reminders', () => context.push('/profile/reminders')),
+              _tile(context, Icons.download_outlined, 'Downloads', () => context.push('/profile/downloads')),
+              _tile(context, Icons.quiz_outlined, 'Quiz history', () => context.push('/profile/quiz-history')),
+              _tile(context, Icons.notifications_outlined, 'Notifications', () => context.push('/profile/notifications')),
+              _tile(context, Icons.tune, 'Notification settings', () => context.push('/profile/notification-preferences')),
+              _tile(context, Icons.language, 'Language', () => _languageSheet(context)),
+              _tile(context, Icons.help_outline, 'Help', () {}),
+            ]),
           ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: PrimaryButton(
-                label: 'Log Out',
-                filled: false,
-                onPressed: () async {
-                  await auth.logout();
-                  if (context.mounted) context.go('/login');
-                },
-              ),
+              child: PrimaryButton(label: 'Log Out', filled: false, onPressed: () => _logout(context)),
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -100,12 +90,43 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _metric(String v, String l, Color c) => TfiCard(
+  void _languageSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: TfiTokens.bg2,
+      builder: (ctx) => SafeArea(
         child: Column(
-          children: [
-            Text(v, style: TfiTokens.display(24, color: c)),
-            Text(l, style: TfiTokens.body(10, color: TfiTokens.textFaint, w: FontWeight.w700)),
-          ],
+          mainAxisSize: MainAxisSize.min,
+          children: ['MIXED', 'TELUGU', 'ENGLISH'].map((lang) {
+            return ListTile(
+              title: Text(lang, style: TfiTokens.body(15, color: TfiTokens.textHi)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                try {
+                  await context.read<AuthProvider>().api.updateProfile({'language_preference': lang});
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Language: $lang')));
+                  }
+                } catch (_) {}
+              },
+            );
+          }).toList(),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _tile(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: TfiCard(
+        child: ListTile(
+          leading: Icon(icon, color: TfiTokens.fire),
+          title: Text(label, style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w600)),
+          trailing: const Icon(Icons.chevron_right, color: TfiTokens.textFaint),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
 }

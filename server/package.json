@@ -8,7 +8,9 @@
     "dev": "nodemon src/server.js",
     "migrate": "node src/config/migrate.js",
     "seed": "node seeds/dev.js",
-    "db:reset": "node scripts/reset-db.js"
+    "db:reset": "node scripts/reset-db.js",
+    "test": "node --test test/*.test.js",
+    "smoke": "node scripts/smoke-test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

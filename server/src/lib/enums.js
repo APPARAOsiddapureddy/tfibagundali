@@ -1,0 +1,41 @@
+/** Product enums — content-first TFI Bagundali */
+
+const UPDATE_CATEGORIES = [
+  'RELEASE_DATE', 'TRAILER', 'TEASER', 'SONG', 'MOVIE_LAUNCH',
+  'DIRECTOR_HERO_COLLAB', 'SHOOTING_UPDATE', 'CASTING_UPDATE', 'CENSOR_UPDATE',
+  'OTT_UPDATE', 'BOX_OFFICE', 'BIRTHDAY', 'ANNIVERSARY', 'EVENT', 'BUZZ', 'GENERAL',
+];
+
+const TRUST_STATUS = ['OFFICIAL', 'VERIFIED', 'MEDIA_REPORT', 'BUZZ', 'CORRECTION'];
+const UPDATE_PRIORITY = ['BREAKING', 'TRENDING', 'NORMAL'];
+const LANGUAGE = ['TELUGU', 'ENGLISH', 'MIXED'];
+const REACTION_TYPES = ['FIRE', 'MASS', 'EXCITED', 'WAITING', 'LOVE', 'SHOCK'];
+const MOVIE_STATUS = ['UPCOMING', 'NOW_RUNNING', 'RELEASED', 'CLASSIC'];
+const POLL_TYPES = ['NORMAL', 'WORD_POLL', 'REACTION', 'PREDICTION_STYLE'];
+const BOOKMARK_TYPES = ['UPDATE', 'MOVIE', 'HERO', 'WALLPAPER', 'STATUS_CARD', 'POLL', 'QUIZ'];
+const REMINDER_TYPES = [
+  'MOVIE_RELEASE', 'TRAILER', 'SONG', 'EVENT', 'OTT',
+  'HERO_BIRTHDAY', 'POLL_RESULT', 'QUIZ',
+];
+
+function toDbEnum(val) {
+  return val ? String(val).toLowerCase() : val;
+}
+
+function fromDbEnum(val) {
+  return val ? String(val).toUpperCase() : val;
+}
+
+module.exports = {
+  UPDATE_CATEGORIES,
+  TRUST_STATUS,
+  UPDATE_PRIORITY,
+  LANGUAGE,
+  REACTION_TYPES,
+  MOVIE_STATUS,
+  POLL_TYPES,
+  BOOKMARK_TYPES,
+  REMINDER_TYPES,
+  toDbEnum,
+  fromDbEnum,
+};

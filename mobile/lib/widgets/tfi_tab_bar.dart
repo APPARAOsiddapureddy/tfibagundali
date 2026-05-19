@@ -9,9 +9,9 @@ class TfiTabBar extends StatelessWidget {
   static const tabs = [
     (Icons.home_outlined, Icons.home, 'Home'),
     (Icons.quiz_outlined, Icons.quiz, 'Quiz'),
-    (Icons.share_outlined, Icons.share, 'Share'),
-    (Icons.shield_outlined, Icons.shield, 'Army'),
-    (Icons.person_outline, Icons.person, 'Me'),
+    (Icons.explore_outlined, Icons.explore, 'Explore'),
+    (Icons.how_to_vote_outlined, Icons.how_to_vote, 'Polls'),
+    (Icons.person_outline, Icons.person, 'Profile'),
   ];
 
   @override

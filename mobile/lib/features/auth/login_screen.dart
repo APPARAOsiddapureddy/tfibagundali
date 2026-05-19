@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/api/api_client.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../data/army_data.dart';
+import '../../core/utils/format_utils.dart';
 import '../../widgets/tfi_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,7 +16,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phone = TextEditingController(text: '9876543291');
+  final _phone = TextEditingController();
+  bool _loading = false;
   String? _error;
 
   @override
@@ -23,18 +26,37 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  String? _validatePhone(String input) {
+    final digits = input.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return 'Enter your phone number';
+    if (digits.length < 10) return 'Enter 10-digit mobile number';
+    if (digits.length > 10) return 'Use 10 digits only (without +91)';
+    return null;
+  }
+
   Future<void> _send() async {
-    final digits = _phone.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 10) {
-      setState(() => _error = 'Enter valid 10-digit number');
+    final err = _validatePhone(_phone.text);
+    if (err != null) {
+      setState(() => _error = err);
       return;
     }
-    final phone = '+91$digits';
+    final digits = _phone.text.replaceAll(RegExp(r'\D'), '');
+    final local = digits.length > 10 ? digits.substring(digits.length - 10) : digits;
+    final phone = '+91$local';
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       await context.read<AuthProvider>().sendOtp(phone);
       if (mounted) context.push('/otp', extra: phone);
+    } on ApiException catch (e) {
+      setState(() => _error = userFacingError(e));
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = userFacingError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -43,39 +65,22 @@ class _LoginScreenState extends State<LoginScreen> {
     return TfiScreen(
       child: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF0F0820), TfiTokens.bg1, Color(0xFF060810)]),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0F0820), TfiTokens.bg1, Color(0xFF060810)],
+          ),
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(gradient: TfiTokens.gradFire, borderRadius: BorderRadius.circular(10)),
-                    alignment: Alignment.center,
-                    child: Text('T', style: TfiTokens.display(22, color: Colors.white)),
-                  ),
-                  const SizedBox(width: 10),
-                  Text('TFI BAGUNDALI', style: TfiTokens.display(18, color: TfiTokens.textHi)),
-                ],
-              ),
+              Text('TFI BAGUNDALI', style: TfiTokens.display(18, color: TfiTokens.textHi)),
               const SizedBox(height: 32),
-              RichText(
-                text: TextSpan(
-                  style: TfiTokens.display(44, color: Colors.white, height: 1),
-                  children: [
-                    const TextSpan(text: 'Welcome,\n'),
-                    TextSpan(text: 'Fan!', style: TextStyle(color: TfiTokens.fire)),
-                    const TextSpan(text: ' 👋'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text('మీ ఫ్యాన్ జర్నీ ఇక్కడ start అవుతుంది', style: TfiTokens.telugu(16, color: TfiTokens.textMid)),
+              Text('Welcome,\nFan!', style: TfiTokens.display(40, color: TfiTokens.fire)),
+              const SizedBox(height: 8),
+              Text('మీ TFI updates journey — phone OTP only', style: TfiTokens.telugu(15, color: TfiTokens.textMid)),
               const SizedBox(height: 28),
               Text('PHONE NUMBER', style: TfiTokens.body(12, color: TfiTokens.textLo, w: FontWeight.w700)),
               const SizedBox(height: 8),
@@ -95,45 +100,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: TextField(
                         controller: _phone,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
                         style: TfiTokens.body(17, color: TfiTokens.textHi, w: FontWeight.w600),
-                        decoration: const InputDecoration(border: InputBorder.none, hintText: '98XXX XXXXX'),
+                        decoration: const InputDecoration(border: InputBorder.none, hintText: '10-digit number'),
+                        onSubmitted: (_) => _loading ? null : _send(),
                       ),
                     ),
                   ],
                 ),
               ),
-              if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: TfiTokens.body(12, color: TfiTokens.red))],
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!, style: TfiTokens.body(12, color: TfiTokens.red)),
+              ],
               const SizedBox(height: 28),
-              PrimaryButton(label: 'Send OTP', icon: '📩', onPressed: _send),
-              const SizedBox(height: 14),
-              Text(
-                '🔒 Login with OTP. No password needed.\nBy continuing you agree to our Terms & Privacy.',
-                textAlign: TextAlign.center,
-                style: TfiTokens.body(12, color: TfiTokens.textLo),
-              ),
-              const SizedBox(height: 40),
-              SizedBox(
-                height: 90,
-                child: Stack(
-                  children: [
-                    for (var i = 0; i < 6; i++)
-                      Positioned(
-                        left: MediaQuery.sizeOf(context).width * (0.1 + i * 0.12),
-                        bottom: i.isEven ? 25 : 5,
-                        child: Transform.rotate(
-                          angle: (i - 2.5) * 0.07,
-                          child: HeroAvatar(armyKey: ArmyData.keys[i], size: 44),
-                        ),
-                      ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: Text('8 ARMIES · 1 MISSION · YOURS', textAlign: TextAlign.center, style: TfiTokens.body(10, color: TfiTokens.textFaint, w: FontWeight.w700)),
-                    ),
-                  ],
-                ),
-              ),
+              PrimaryButton(label: _loading ? 'Sending...' : 'Send OTP', icon: '📩', onPressed: _loading ? null : _send),
             ],
           ),
         ),

@@ -121,7 +121,13 @@ async function seed() {
       NOW() + INTERVAL '7 days', $1),
      ('One word for Peddi update?', 'word',
       '[{"id":"a","label":"Mass","vote_count":1200},{"id":"b","label":"Fire","vote_count":980},{"id":"c","label":"Goosebumps","vote_count":760},{"id":"d","label":"Waiting","vote_count":540}]'::jsonb,
-      NOW() + INTERVAL '3 days', $1)
+      NOW() + INTERVAL '3 days', $1),
+     ('How hyped are you for the Peddi trailer?', 'reaction',
+      '[{"id":"excited","label":"Very excited","vote_count":800},{"id":"mass","label":"Mass hype","vote_count":650},{"id":"love","label":"Loved the glimpse","vote_count":420},{"id":"waiting","label":"Waiting for more","vote_count":300}]'::jsonb,
+      NOW() + INTERVAL '5 days', $1),
+     ('Will Peddi cross 200Cr opening weekend? (fan opinion only)', 'prediction',
+      '[{"id":"yes","label":"Yes — mass opening","vote_count":900},{"id":"maybe","label":"Maybe","vote_count":600},{"id":"no","label":"Unlikely","vote_count":200}]'::jsonb,
+      NOW() + INTERVAL '6 days', $1)
      ON CONFLICT DO NOTHING`,
     [peddiId]
   );
@@ -150,6 +156,23 @@ async function seed() {
       `INSERT INTO status_cards (title, category, hero_id, image_url, is_trending)
        VALUES ($1,$2,$3,'https://placehold.co/400x600/1A1F2E/FF6B21?text=Card',TRUE) ON CONFLICT DO NOTHING`,
       [title, cat, heroId]
+    );
+  }
+
+  const { rows: seedUsers } = await pool.query('SELECT id FROM users LIMIT 3');
+  for (const u of seedUsers) {
+    await pool.query(
+      `INSERT INTO user_notifications (user_id, title, body, category, content_type)
+       SELECT $1, v.title, v.body, v.category, v.content_type
+       FROM (VALUES
+         ('Peddi update is live', 'Breaking: new stills dropped for Peddi.', 'updates', 'update'),
+         ('Daily quiz ready', 'Play today''s TFI quiz and test your fan knowledge.', 'quiz', 'quiz'),
+         ('New poll: fan opinion', 'Vote on the most awaited movie this month.', 'polls', 'poll')
+       ) AS v(title, body, category, content_type)
+       WHERE NOT EXISTS (
+         SELECT 1 FROM user_notifications n WHERE n.user_id = $1 AND n.title = v.title
+       )`,
+      [u.id]
     );
   }
 

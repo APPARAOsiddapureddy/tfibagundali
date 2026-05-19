@@ -1,20 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../features/army/army_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/onboard_screen.dart';
 import '../../features/auth/otp_screen.dart';
+import '../../features/explore/explore_screen.dart';
+import '../../features/explore/status_card_detail_screen.dart';
+import '../../features/explore/wallpaper_detail_screen.dart';
+import '../../features/heroes/hero_detail_screen.dart';
 import '../../features/home/home_screen.dart';
-import '../../features/missions/missions_screen.dart';
+import '../../features/movies/movie_detail_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
+import '../../features/polls/polls_screen.dart';
+import '../../features/profile/downloads_screen.dart';
+import '../../features/profile/favourite_hero_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/quiz_history_screen.dart';
+import '../../features/profile/reminders_screen.dart';
+import '../../features/profile/saved_screen.dart';
 import '../../features/quiz/quiz_play_screen.dart';
 import '../../features/quiz/quiz_result_screen.dart';
 import '../../features/quiz/quiz_screen.dart';
+import '../../features/search/search_screen.dart';
+import '../../features/settings/notification_prefs_screen.dart';
 import '../../features/settings/settings_screen.dart';
-import '../../features/share/share_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../features/splash/splash_screen.dart';
+import '../../features/updates/update_detail_screen.dart';
+import '../../features/updates/updates_feed_screen.dart';
 import '../providers/auth_provider.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -28,9 +40,9 @@ GoRouter createRouter(AuthProvider auth) {
       final loc = state.matchedLocation;
       if (auth.booting) return loc == '/splash' ? null : '/splash';
       if (loc == '/splash') return auth.isLoggedIn ? '/home' : '/login';
-      final public = {'/login', '/otp', '/onboard'};
+      final public = {'/login', '/otp', '/onboard', '/onboarding/hero'};
       if (!auth.isLoggedIn && !public.contains(loc)) return '/login';
-      if (auth.isLoggedIn && loc == '/login') return '/home';
+      if (auth.isLoggedIn && (loc == '/login' || loc == '/otp')) return '/home';
       return null;
     },
     routes: [
@@ -41,15 +53,48 @@ GoRouter createRouter(AuthProvider auth) {
         builder: (_, state) => OtpScreen(phone: state.extra as String? ?? '+91'),
       ),
       GoRoute(path: '/onboard', builder: (_, __) => const OnboardScreen()),
+      GoRoute(path: '/onboarding/hero', builder: (_, __) => const OnboardScreen()),
       GoRoute(
-        path: '/missions',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const MissionsScreen(),
+        path: '/updates',
+        builder: (_, state) => UpdatesFeedScreen(
+          initialCategory: state.uri.queryParameters['category'],
+          initialHeroId: state.uri.queryParameters['hero_id'],
+        ),
       ),
       GoRoute(
-        path: '/notifications',
+        path: '/search',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const NotificationsScreen(),
+        builder: (_, __) => const SearchScreen(),
+      ),
+      GoRoute(
+        path: '/updates/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => UpdateDetailScreen(updateId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/polls/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => PollDetailScreen(pollId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/movies/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => MovieDetailScreen(movieId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/heroes/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => HeroDetailScreen(heroId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/wallpapers/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => WallpaperDetailScreen(wallpaperId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/status-cards/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => StatusCardDetailScreen(cardId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/settings',
@@ -57,22 +102,62 @@ GoRouter createRouter(AuthProvider auth) {
         builder: (_, __) => const SettingsScreen(),
       ),
       GoRoute(
+        path: '/profile/notification-preferences',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const NotificationPrefsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/notifications',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const NotificationPrefsScreen(),
+      ),
+      GoRoute(
+        path: '/profile/downloads',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const DownloadsScreen(),
+      ),
+      GoRoute(
+        path: '/profile/saved',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const SavedScreen(),
+      ),
+      GoRoute(
+        path: '/profile/reminders',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const RemindersScreen(),
+      ),
+      GoRoute(
+        path: '/profile/notifications',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/profile/favourite-hero',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const FavouriteHeroScreen(),
+      ),
+      GoRoute(
+        path: '/profile/quiz-history',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const QuizHistoryScreen(),
+      ),
+      GoRoute(
         path: '/quiz/play',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const QuizPlayScreen(),
+        builder: (_, state) => QuizPlayScreen(session: state.extra as Map<String, dynamic>?),
       ),
       GoRoute(
         path: '/quiz/result',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const QuizResultScreen(),
+        builder: (_, state) => QuizResultScreen(result: state.extra as Map<String, dynamic>?),
       ),
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => MainShell(navigationShell: shell),
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, __) => const HomeScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/quiz', builder: (_, __) => const QuizScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/share', builder: (_, __) => const ShareScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/army', builder: (_, __) => const ArmyScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/explore', builder: (_, __) => const ExploreScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/polls', builder: (_, __) => const PollsScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen())]),
         ],
       ),
