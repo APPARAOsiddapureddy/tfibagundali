@@ -225,7 +225,14 @@ class _HomeScreenState extends State<HomeScreen> {
         itemBuilder: (context, i) {
           final active = i == _activeFilter;
           return GestureDetector(
-            onTap: () => setState(() => _activeFilter = i),
+            onTap: () {
+              if (i == 2) {
+                // Movie Reviews chip → navigate to reviews screen
+                context.push('/reviews');
+              } else {
+                setState(() => _activeFilter = i);
+              }
+            },
             child: TfiChip(
               label: _filterLabels[i],
               active: active,

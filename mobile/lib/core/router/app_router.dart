@@ -12,6 +12,8 @@ import '../../features/messages/messages_screen.dart';
 import '../../features/notifications/notifications_tab_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/movies/movie_detail_screen.dart';
+import '../../features/reviews/movie_reviews_screen.dart';
+import '../../features/reviews/movie_review_detail_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/polls/polls_screen.dart';
 import '../../features/profile/downloads_screen.dart';
@@ -99,6 +101,16 @@ GoRouter createRouter(AuthProvider auth) {
         path: '/movies/:id',
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => MovieDetailScreen(movieId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/reviews',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const MovieReviewsScreen(),
+      ),
+      GoRoute(
+        path: '/reviews/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => MovieReviewDetailScreen(movieId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/heroes/:id',
