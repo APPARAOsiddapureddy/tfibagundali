@@ -2,63 +2,53 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../core/utils/format_utils.dart';
+import '../../widgets/tfi_cinematic_components.dart';
+import '../../widgets/tfi_network_image.dart';
+import '../../widgets/tfi_poster_placeholder.dart';
 
-class QuizQuestion {
-  const QuizQuestion({
-    required this.imageUrl,
+class QuizQuestionData {
+  const QuizQuestionData({
+    required this.id,
     required this.question,
     required this.options,
-    required this.correctIndex,
+    this.imageUrl,
   });
 
-  final String imageUrl;
+  final String id;
   final String question;
-  final List<String> options;
-  final int correctIndex;
+  final List<QuizOptionData> options;
+  final String? imageUrl;
 }
 
-// TODO(backend): Replace this local prototype list with GET /v1/quiz/today.
-// The API should return exactly 5 questions for this quiz format:
-// id, image_url, question_text, four options, and server-side answer metadata.
-const _prototypeQuestions = [
-  QuizQuestion(
-    imageUrl: 'assets/quiz/radheshyam.png',
-    question: 'Guess the Movie name',
-    options: ['Radhe Shyam', 'Hi nanna', 'Darling', 'Most Eligible Bachelor'],
-    correctIndex: 0,
-  ),
-  QuizQuestion(
-    imageUrl: 'assets/quiz/ashok.png',
-    question: 'Guess the Movie name',
-    options: ['Rakhi', 'Ashok', 'Student No.1', 'Yamadonga'],
-    correctIndex: 1,
-  ),
-  QuizQuestion(
-    imageUrl: 'assets/quiz/alluarjun.png',
-    question: 'Guess the Hero of the Movie',
-    options: ['Jr.NTR', 'Mahesh Babu', 'Allu Arjun', 'Pawan Kalyan'],
-    correctIndex: 2,
-  ),
-  QuizQuestion(
-    imageUrl: 'assets/quiz/chandrashekar.png',
-    question: 'Guess the Movie\'s Director',
-    options: [
-      'Nanda kishore Emani',
-      'Hanu raghavapudi',
-      'chandrasekhar Yeleti',
-      'Praveen Sattaru',
-    ],
-    correctIndex: 2,
-  ),
-  QuizQuestion(
-    imageUrl: 'assets/quiz/gv.png',
-    question: 'Guess the Movie\'s Music Director',
-    options: ['Mani Sharma', 'Thaman S', 'Yuvan Shankar Raja', 'G. V. Prakash'],
-    correctIndex: 3,
-  ),
-];
+class QuizOptionData {
+  const QuizOptionData({required this.id, required this.label});
+  final String id;
+  final String label;
+}
+
+List<QuizQuestionData> _parseQuestions(Map<String, dynamic> session) {
+  final raw = session['questions'] as List? ?? [];
+  return raw.map((e) {
+    final m = Map<String, dynamic>.from(e as Map);
+    final opts = (m['options'] as List? ?? []).map((o) {
+      final om = Map<String, dynamic>.from(o as Map);
+      return QuizOptionData(
+        id: om['id'] as String? ?? om['option_id'] as String? ?? om['label'] as String? ?? '',
+        label: om['label'] as String? ?? om['text'] as String? ?? '',
+      );
+    }).toList();
+    return QuizQuestionData(
+      id: m['id'] as String? ?? m['question_id'] as String? ?? '',
+      question: m['question'] as String? ?? m['question_text'] as String? ?? '',
+      options: opts,
+      imageUrl: m['image_url'] as String?,
+    );
+  }).toList();
+}
 
 class QuizPlayScreen extends StatefulWidget {
   const QuizPlayScreen({super.key, this.session});
@@ -71,21 +61,56 @@ class QuizPlayScreen extends StatefulWidget {
 class _QuizPlayScreenState extends State<QuizPlayScreen> {
   static const _secondsPerQuestion = 15;
 
+  Map<String, dynamic>? _session;
+  List<QuizQuestionData> _questions = [];
   int _questionIndex = 0;
-  int? _selectedIndex;
+  String? _selectedOptionId;
   int _secondsLeft = _secondsPerQuestion;
   Timer? _timer;
-  final List<int?> _answers = List<int?>.filled(
-    _prototypeQuestions.length,
-    null,
-  );
+  bool _submitting = false;
+  bool _answered = false;
+  bool _loading = true;
 
-  QuizQuestion get _currentQuestion => _prototypeQuestions[_questionIndex];
-  bool get _isLastQuestion => _questionIndex == _prototypeQuestions.length - 1;
+  QuizQuestionData get _current => _questions[_questionIndex];
+  bool get _isLast => _questionIndex >= _questions.length - 1;
+  Object? get _sessionId => _session?['session_id'] ?? _session?['id'];
 
   @override
   void initState() {
     super.initState();
+    _initSession();
+  }
+
+  Future<void> _initSession() async {
+    if (widget.session != null && (widget.session!['questions'] as List?)?.isNotEmpty == true) {
+      _applySession(widget.session!);
+      return;
+    }
+    try {
+      final session = await context.read<AuthProvider>().api.startQuiz();
+      if (mounted) _applySession(session);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(userFacingError(e))));
+        context.pop();
+      }
+    }
+  }
+
+  void _applySession(Map<String, dynamic> session) {
+    final qs = _parseQuestions(session);
+    if (qs.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No quiz questions available')));
+        context.pop();
+      }
+      return;
+    }
+    setState(() {
+      _session = session;
+      _questions = qs;
+      _loading = false;
+    });
     _startTimer();
   }
 
@@ -101,55 +126,61 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       if (_secondsLeft <= 1) {
-        _goNext(force: true);
+        _submitAndAdvance(force: true);
         return;
       }
       setState(() => _secondsLeft--);
     });
   }
 
-  void _selectOption(int index) {
-    setState(() {
-      _selectedIndex = index;
-      _answers[_questionIndex] = index;
-    });
+  void _selectOption(String optionId) {
+    if (_answered) return;
+    setState(() => _selectedOptionId = optionId);
   }
 
-  void _goNext({bool force = false}) {
-    if (_selectedIndex == null && !force) return;
+  Future<void> _submitAndAdvance({bool force = false}) async {
+    if (_selectedOptionId == null && !force) return;
+    if (_submitting) return;
 
-    // TODO(backend): For production, submit each answer to POST /v1/quiz/answer
-    // or submit all answers at the end. Keep correct-answer checks on the server
-    // to prevent clients from inspecting answer keys.
-    if (_isLastQuestion) {
-      _timer?.cancel();
-      final score = _calculateScore();
-      context.go(
-        '/quiz/result',
-        extra: {
-          'score': score,
-          'total': _prototypeQuestions.length,
-          'message': score == _prototypeQuestions.length
-              ? 'Full mass! You got every answer right.'
-              : 'Good try! Come back tomorrow for a fresh quiz.',
-        },
-      );
+    setState(() => _submitting = true);
+    _timer?.cancel();
+
+    final sid = _sessionId;
+    if (sid != null && _selectedOptionId != null) {
+      try {
+        await context.read<AuthProvider>().api.submitQuizAnswer(sid, _current.id, _selectedOptionId!);
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+
+    if (_isLast) {
+      Map<String, dynamic> result = {'score': 0, 'total': _questions.length};
+      if (sid != null) {
+        try {
+          result = await context.read<AuthProvider>().api.completeQuiz(sid);
+        } catch (_) {}
+      }
+      if (mounted) {
+        context.go('/quiz/result', extra: {
+          'score': result['score'] ?? result['correct_count'] ?? 0,
+          'total': result['total'] ?? result['total_questions'] ?? _questions.length,
+          'correct': result['correct'] ?? result['correct_count'],
+          'wrong': result['wrong'] ?? result['wrong_count'],
+          'percentage': result['percentage'] ?? result['percent'],
+          'message': result['message'] as String? ?? 'Quiz complete!',
+        });
+      }
       return;
     }
 
     setState(() {
       _questionIndex++;
-      _selectedIndex = _answers[_questionIndex];
+      _selectedOptionId = null;
+      _answered = false;
+      _submitting = false;
     });
     _startTimer();
-  }
-
-  int _calculateScore() {
-    var score = 0;
-    for (var i = 0; i < _prototypeQuestions.length; i++) {
-      if (_answers[i] == _prototypeQuestions[i].correctIndex) score++;
-    }
-    return score;
   }
 
   Future<void> _confirmExit() async {
@@ -157,17 +188,12 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final leave = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Leave quiz?'),
-        content: const Text('Your quiz progress will be lost.'),
+        backgroundColor: TfiTokens.card1,
+        title: Text('Leave quiz?', style: TfiTokens.title(16)),
+        content: Text('Your progress will be lost.', style: TfiTokens.body(14, color: TfiTokens.textMid)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Stay'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Leave'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Stay')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Leave', style: TextStyle(color: TfiTokens.red))),
         ],
       ),
     );
@@ -177,66 +203,108 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final question = _currentQuestion;
-    final progress = (_questionIndex + 1) / _prototypeQuestions.length;
+    if (_loading) {
+      return const TfiScaffold(child: Center(child: CircularProgressIndicator(color: TfiTokens.gold)));
+    }
+
+    final progress = (_questionIndex + 1) / _questions.length;
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (!didPop) await _confirmExit();
       },
-      child: TfiScreen(
+      child: TfiScaffold(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 12, TfiTokens.padScreen, 8),
               child: Row(
                 children: [
-                  BackButtonCircle(onTap: _confirmExit),
-                  const SizedBox(width: 12),
-                  Expanded(child: TfiProgressBar(value: progress)),
-                  const SizedBox(width: 12),
-                  _TimerPill(secondsLeft: _secondsLeft),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${_questionIndex + 1}/${_prototypeQuestions.length}',
-                    style: TfiTokens.body(
-                      13,
-                      color: TfiTokens.textHi,
-                      w: FontWeight.w800,
+                  Material(
+                    color: TfiTokens.glass,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: _confirmExit,
+                      borderRadius: BorderRadius.circular(12),
+                      child: const SizedBox(width: 40, height: 40, child: Icon(Icons.close_rounded, color: TfiTokens.textHi, size: 20)),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        backgroundColor: TfiTokens.glass,
+                        color: TfiTokens.gold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  TfiCountdownChip('${_secondsLeft}s'),
+                  const SizedBox(width: 8),
+                  Text('${_questionIndex + 1}/${_questions.length}', style: TfiTokens.body(12, color: TfiTokens.textHi, w: FontWeight.w800)),
                 ],
               ),
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 4, TfiTokens.padScreen, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _QuestionImage(url: question.imageUrl),
-                    const SizedBox(height: 18),
-                    TfiChip(
-                      label: 'QUESTION ${_questionIndex + 1}',
-                      color: TfiTokens.fire,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      question.question,
-                      style: TfiTokens.display(
-                        24,
-                        color: TfiTokens.textHi,
-                        height: 1.12,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(TfiTokens.rCard),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 10,
+                        child: _current.imageUrl != null && _current.imageUrl!.isNotEmpty
+                            ? TfiNetworkImage(url: _current.imageUrl, fit: BoxFit.cover, placeholderKind: TfiPlaceholderKind.quiz, placeholderTitle: _current.question)
+                            : TfiPosterPlaceholder(kind: TfiPlaceholderKind.quiz, title: _current.question, icon: Icons.quiz_rounded),
                       ),
                     ),
                     const SizedBox(height: 18),
-                    ...List.generate(question.options.length, (index) {
-                      return _OptionTile(
-                        label: String.fromCharCode(65 + index),
-                        text: question.options[index],
-                        selected: _selectedIndex == index,
-                        onTap: () => _selectOption(index),
+                    const TfiBadge('Question'),
+                    const SizedBox(height: 10),
+                    Text(_current.question, style: TfiTokens.display(22, color: TfiTokens.textHi, height: 1.12)),
+                    const SizedBox(height: 18),
+                    ...List.generate(_current.options.length, (index) {
+                      final o = _current.options[index];
+                      final selected = _selectedOptionId == o.id;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: GestureDetector(
+                          onTap: _answered ? null : () => _selectOption(o.id),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 160),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: selected ? TfiTokens.gold.withValues(alpha: 0.15) : TfiTokens.card1.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: selected ? TfiTokens.gold : TfiTokens.lineStrong, width: selected ? 2 : 1),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: selected ? TfiTokens.gold : TfiTokens.glass,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    String.fromCharCode(65 + index),
+                                    style: TfiTokens.body(13, color: selected ? const Color(0xFF1A0F00) : TfiTokens.textMid, w: FontWeight.w900),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(o.label, style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w600))),
+                              ],
+                            ),
+                          ),
+                        ),
                       );
                     }),
                   ],
@@ -244,163 +312,14 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-              child: PrimaryButton(
-                label: _isLastQuestion ? 'Finish Quiz' : 'Next Question',
-                onPressed: _selectedIndex == null ? null : _goNext,
+              padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 8, TfiTokens.padScreen, 24),
+              child: TfiPrimaryButton(
+                label: _isLast ? 'Finish Quiz' : 'Next Question',
+                loading: _submitting,
+                onPressed: _selectedOptionId == null || _submitting ? null : () => _submitAndAdvance(),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuestionImage extends StatelessWidget {
-  const _QuestionImage({required this.url});
-
-  final String url;
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 16 / 10,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: TfiTokens.bg2,
-            border: Border.all(color: TfiTokens.lineStrong),
-          ),
-          child: url.startsWith('assets/')
-              ? Image.asset(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const _ImageFallback(),
-                )
-              : Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const _ImageFallback(),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ImageFallback extends StatelessWidget {
-  const _ImageFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(gradient: TfiTokens.gradMass),
-      child: Text(
-        'Quiz image',
-        style: TfiTokens.display(22, color: Colors.white),
-      ),
-    );
-  }
-}
-
-class _TimerPill extends StatelessWidget {
-  const _TimerPill({required this.secondsLeft});
-
-  final int secondsLeft;
-
-  @override
-  Widget build(BuildContext context) {
-    final urgent = secondsLeft <= 5;
-    final color = urgent ? TfiTokens.red : TfiTokens.cyan;
-
-    return Container(
-      width: 54,
-      height: 30,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        '${secondsLeft}s',
-        style: TfiTokens.mono(12, color: color, w: FontWeight.w900),
-      ),
-    );
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  const _OptionTile({
-    required this.label,
-    required this.text,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final String text;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selected
-                ? TfiTokens.fire.withValues(alpha: 0.16)
-                : TfiTokens.bg2,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? TfiTokens.fire : TfiTokens.line,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: selected
-                      ? TfiTokens.fire
-                      : Colors.white.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  label,
-                  style: TfiTokens.body(
-                    13,
-                    color: Colors.white,
-                    w: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  text,
-                  style: TfiTokens.body(
-                    15,
-                    color: TfiTokens.textHi,
-                    w: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

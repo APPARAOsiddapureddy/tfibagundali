@@ -1,40 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/tfi_widgets.dart';
-
-class LeaderboardEntry {
-  const LeaderboardEntry({
-    required this.rank,
-    required this.name,
-    required this.score,
-    required this.time,
-  });
-
-  final int rank;
-  final String name;
-  final int score;
-  final String time;
-}
-
-// TODO(backend): Replace these demo lists with GET /v1/quiz/leaderboard
-// using a period query parameter, for example period=daily or period=weekly.
-// The backend should rank by score, completion time, and submitted_at.
-const _dailyLeaderboard = [
-  LeaderboardEntry(rank: 1, name: 'Rakesh', score: 5, time: '00:42'),
-  LeaderboardEntry(rank: 2, name: 'Mounika', score: 5, time: '00:57'),
-  LeaderboardEntry(rank: 3, name: 'Sai Kumar', score: 4, time: '00:39'),
-  LeaderboardEntry(rank: 4, name: 'Anusha', score: 4, time: '01:08'),
-  LeaderboardEntry(rank: 5, name: 'Kiran', score: 3, time: '00:51'),
-];
-
-const _weeklyLeaderboard = [
-  LeaderboardEntry(rank: 1, name: 'Mounika', score: 34, time: '06 quizzes'),
-  LeaderboardEntry(rank: 2, name: 'Rakesh', score: 32, time: '06 quizzes'),
-  LeaderboardEntry(rank: 3, name: 'Sai Kumar', score: 29, time: '05 quizzes'),
-  LeaderboardEntry(rank: 4, name: 'Anusha', score: 27, time: '05 quizzes'),
-  LeaderboardEntry(rank: 5, name: 'Kiran', score: 24, time: '05 quizzes'),
-];
+import '../../widgets/tfi_cinematic_components.dart';
 
 class QuizResultScreen extends StatefulWidget {
   const QuizResultScreen({super.key, this.result});
@@ -45,70 +15,71 @@ class QuizResultScreen extends StatefulWidget {
 }
 
 class _QuizResultScreenState extends State<QuizResultScreen> {
-  var _period = _LeaderboardPeriod.daily;
+  List<Map<String, dynamic>> _leaderboard = [];
+  bool _loadingBoard = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLeaderboard();
+  }
+
+  Future<void> _loadLeaderboard() async {
+    try {
+      final data = await context.read<AuthProvider>().api.getQuizLeaderboard();
+      final entries = data['entries'] as List? ?? data['leaderboard'] as List? ?? [];
+      if (mounted) {
+        setState(() {
+          _leaderboard = entries.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _loadingBoard = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingBoard = false);
+    }
+  }
+
+  void _shareResult(int score, int total, int? pct) {
+    Share.share('TFI Quiz — I scored $score/$total${pct != null ? ' ($pct%)' : ''} on TFI Bagundali!');
+  }
 
   @override
   Widget build(BuildContext context) {
-    final score = widget.result?['score'] ?? 0;
-    final total = widget.result?['total'] ?? 0;
-    final message = widget.result?['message'] as String? ?? 'Good try!';
-    final entries = _period == _LeaderboardPeriod.daily
-        ? _dailyLeaderboard
-        : _weeklyLeaderboard;
+    final score = widget.result?['score'] as int? ?? 0;
+    final total = widget.result?['total'] as int? ?? 0;
+    final correct = widget.result?['correct'] as int? ?? score;
+    final wrong = widget.result?['wrong'] as int? ?? (total - score).clamp(0, total);
+    final pct = widget.result?['percentage'] as int? ?? (total > 0 ? ((score / total) * 100).round() : 0);
+    final message = widget.result?['message'] as String? ?? 'Quiz complete!';
 
-    return TfiScreen(
+    return TfiScaffold(
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                children: [
-                  BackButtonCircle(onTap: () => context.go('/quiz')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Quiz Result',
-                      style: TfiTokens.display(26, color: TfiTokens.textHi),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: TfiDetailAppBar(title: 'Quiz Result', onBack: () => context.go('/quiz')),
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(TfiTokens.padScreen),
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: TfiTokens.gradMass,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(TfiTokens.rHero),
+                  boxShadow: [
+                    BoxShadow(color: TfiTokens.gold.withValues(alpha: 0.25), blurRadius: 24, spreadRadius: 2),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      'QUIZ COMPLETE',
-                      style: TfiTokens.body(
-                        12,
-                        color: Colors.white70,
-                        w: FontWeight.w900,
-                      ),
-                    ),
+                    const Text('🏆', style: TextStyle(fontSize: 56)),
                     const SizedBox(height: 8),
-                    Text(
-                      '$score / $total',
-                      style: TfiTokens.display(48, color: TfiTokens.gold),
-                    ),
+                    Text('QUIZ COMPLETE', style: TfiTokens.body(11, color: Colors.white70, w: FontWeight.w900)),
                     const SizedBox(height: 8),
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: TfiTokens.body(
-                        14,
-                        color: Colors.white.withValues(alpha: 0.84),
-                      ),
-                    ),
+                    Text('$score / $total', style: TfiTokens.display(52, color: TfiTokens.gold)),
+                    Text('$pct%', style: TfiTokens.display(20, color: Colors.white)),
+                    const SizedBox(height: 8),
+                    Text(message, textAlign: TextAlign.center, style: TfiTokens.body(14, color: Colors.white.withValues(alpha: 0.85))),
                   ],
                 ),
               ),
@@ -116,238 +87,100 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
               child: Row(
                 children: [
-                  Expanded(child: SectionTitle(title: 'Leaderboard')),
-                  _PeriodToggle(
-                    period: _period,
-                    onChanged: (period) => setState(() => _period = period),
-                  ),
+                  Expanded(child: _StatBox(label: 'Correct', value: '$correct', color: TfiTokens.green)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _StatBox(label: 'Wrong', value: '$wrong', color: TfiTokens.red)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _StatBox(label: 'Score %', value: '$pct%', color: TfiTokens.gold)),
                 ],
               ),
             ),
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TfiCard(
-                noPad: true,
-                accent: _period == _LeaderboardPeriod.daily
-                    ? TfiTokens.fire
-                    : TfiTokens.purple,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+              padding: const EdgeInsets.all(TfiTokens.padScreen),
+              child: Column(
+                children: [
+                  TfiPrimaryButton(label: 'Share Result', icon: Icons.share_rounded, onPressed: () => _shareResult(score, total, pct)),
+                  const SizedBox(height: 10),
+                  TfiSecondaryButton(label: 'View History', icon: Icons.history_rounded, onPressed: () => context.push('/profile/quiz-history')),
+                  const SizedBox(height: 10),
+                  TfiSecondaryButton(label: 'Back to Quiz', onPressed: () => context.go('/quiz')),
+                ],
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: TfiSectionHeader(title: 'Leaderboard', subtitle: 'Daily fans')),
+          if (_loadingBoard)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator(color: TfiTokens.gold)),
+              ),
+            )
+          else if (_leaderboard.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
+                child: TfiCard(
+                  child: Text('Leaderboard coming soon — play daily to climb ranks!', style: TfiTokens.body(13, color: TfiTokens.textMid)),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, i) {
+                  final e = _leaderboard[i];
+                  final rank = e['rank'] as int? ?? i + 1;
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(TfiTokens.padScreen, 0, TfiTokens.padScreen, 8),
+                    child: TfiCard(
                       child: Row(
                         children: [
-                          TfiChip(
-                            label: _period == _LeaderboardPeriod.daily
-                                ? 'TODAY'
-                                : 'THIS WEEK',
-                            color: _period == _LeaderboardPeriod.daily
-                                ? TfiTokens.fire
-                                : TfiTokens.purple,
-                            active: true,
-                          ),
-                          const Spacer(),
-                          Text(
-                            _period == _LeaderboardPeriod.daily
-                                ? 'Resets midnight'
-                                : 'Mon-Sun total',
-                            style: TfiTokens.body(
-                              11,
-                              color: TfiTokens.textLo,
-                              w: FontWeight.w700,
+                          Text('#$rank', style: TfiTokens.mono(12, color: TfiTokens.gold)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              e['name'] as String? ?? e['display_name'] as String? ?? 'Fan',
+                              style: TfiTokens.body(14, color: TfiTokens.textHi, w: FontWeight.w700),
                             ),
                           ),
+                          Text('${e['score'] ?? 0}', style: TfiTokens.display(18, color: TfiTokens.gold)),
                         ],
                       ),
                     ),
-                    ...entries.map((entry) => _LeaderboardRow(entry: entry)),
-                    const SizedBox(height: 8),
-                  ],
-                ),
+                  );
+                },
+                childCount: _leaderboard.length.clamp(0, 10),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
-              child: PrimaryButton(
-                label: 'Back to Quiz',
-                onPressed: () => context.go('/quiz'),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: PrimaryButton(
-                label: 'Back to Home',
-                filled: false,
-                onPressed: () => context.go('/home'),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          const SliverToBoxAdapter(child: SizedBox(height: 88)),
         ],
       ),
     );
   }
 }
 
-enum _LeaderboardPeriod { daily, weekly }
-
-class _PeriodToggle extends StatelessWidget {
-  const _PeriodToggle({required this.period, required this.onChanged});
-
-  final _LeaderboardPeriod period;
-  final ValueChanged<_LeaderboardPeriod> onChanged;
+class _StatBox extends StatelessWidget {
+  const _StatBox({required this.label, required this.value, required this.color});
+  final String label;
+  final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TfiTokens.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: TfiTokens.glassCard(radius: 14),
+      child: Column(
         children: [
-          _ToggleButton(
-            label: 'Daily',
-            active: period == _LeaderboardPeriod.daily,
-            onTap: () => onChanged(_LeaderboardPeriod.daily),
-          ),
-          _ToggleButton(
-            label: 'Weekly',
-            active: period == _LeaderboardPeriod.weekly,
-            onTap: () => onChanged(_LeaderboardPeriod.weekly),
-          ),
+          Text(value, style: TfiTokens.display(20, color: color)),
+          Text(label, style: TfiTokens.body(11, color: TfiTokens.textLo)),
         ],
-      ),
-    );
-  }
-}
-
-class _ToggleButton extends StatelessWidget {
-  const _ToggleButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-        decoration: BoxDecoration(
-          color: active
-              ? TfiTokens.fire.withValues(alpha: 0.18)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Text(
-          label,
-          style: TfiTokens.body(
-            12,
-            color: active ? TfiTokens.gold : TfiTokens.textLo,
-            w: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LeaderboardRow extends StatelessWidget {
-  const _LeaderboardRow({required this.entry});
-
-  final LeaderboardEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final rankColor = switch (entry.rank) {
-      1 => TfiTokens.gold,
-      2 => TfiTokens.cyan,
-      3 => TfiTokens.fire,
-      _ => TfiTokens.textLo,
-    };
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: entry.rank == 1
-              ? TfiTokens.gold.withValues(alpha: 0.08)
-              : Colors.white.withValues(alpha: 0.035),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: entry.rank == 1
-                ? TfiTokens.gold.withValues(alpha: 0.24)
-                : TfiTokens.line,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: rankColor.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: rankColor.withValues(alpha: 0.26)),
-              ),
-              child: Text(
-                '#${entry.rank}',
-                style: TfiTokens.mono(11, color: rankColor),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.name,
-                    style: TfiTokens.body(
-                      14,
-                      color: TfiTokens.textHi,
-                      w: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    entry.time,
-                    style: TfiTokens.body(
-                      11,
-                      color: TfiTokens.textLo,
-                      w: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '${entry.score}',
-              style: TfiTokens.display(22, color: TfiTokens.gold),
-            ),
-          ],
-        ),
       ),
     );
   }

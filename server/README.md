@@ -21,6 +21,13 @@ API: http://localhost:3001/health
 
 **Dev login:** phone `9876543291`, OTP `123456`
 
+### Image uploads (admin)
+
+- Local storage: `server/uploads/` served at `http://localhost:3001/uploads/...`
+- Admin UI: http://localhost:3001/admin/upload
+- Max file size: **5MB** · requires header `x-admin-key` (`ADMIN_API_KEY` in `.env`)
+- Docs: [UPLOADS.md](./docs/UPLOADS.md)
+
 ## Scripts
 
 | Command | Description |
@@ -35,6 +42,7 @@ API: http://localhost:3001/health
 
 - [API.md](./docs/API.md) — route list
 - [RECOMMENDATIONS.md](./docs/RECOMMENDATIONS.md) — scoring & personalization
+- [UPLOADS.md](./docs/UPLOADS.md) — admin media upload & storage
 
 ## Architecture
 

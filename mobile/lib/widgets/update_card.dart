@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_tokens.dart';
 import '../core/utils/format_utils.dart';
 import '../models/models.dart';
+import 'tfi_cinematic_components.dart' show TfiBadge, TfiCard;
 import 'tfi_network_image.dart';
-import 'tfi_widgets.dart';
+import 'tfi_poster_placeholder.dart';
 
+/// Feed update card — [compact] uses a horizontal row (no overflow on narrow widths).
 class UpdateCard extends StatelessWidget {
   const UpdateCard({
     super.key,
@@ -27,74 +29,138 @@ class UpdateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCorrection = update.status == 'CORRECTION';
-    final isBuzz = update.status == 'BUZZ';
+    if (compact) return _buildCompactRow(context);
+    return _buildVerticalCard(context);
+  }
 
+  Widget _buildCompactRow(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: TfiCard(
-        child: Column(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(12),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!compact)
-              TfiNetworkImage(
-                url: update.imageUrl,
-                height: 140,
-                borderRadius: BorderRadius.circular(10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 92,
+                height: 92,
+                child: TfiNetworkImage(
+                  url: update.imageUrl,
+                  width: 92,
+                  height: 92,
+                  fit: BoxFit.cover,
+                  placeholderKind: TfiPlaceholderKind.update,
+                  placeholderTitle: update.title,
+                ),
               ),
-            if (!compact) const SizedBox(height: 10),
-            Row(
-              children: [
-                TfiChip(label: _categoryLabel(update.category), color: TfiTokens.fire),
-                const SizedBox(width: 6),
-                TrustBadge(status: update.status.toLowerCase()),
-                if (isBuzz) ...[
-                  const SizedBox(width: 6),
-                  TfiChip(label: 'BUZZ', color: TfiTokens.purple),
-                ],
-                if (isCorrection) ...[
-                  const SizedBox(width: 6),
-                  TfiChip(label: 'CORRECTION', color: TfiTokens.gold),
-                ],
-              ],
             ),
-            if (raw?['correction_of_update_id'] != null) ...[
-              const SizedBox(height: 6),
-              Text('Correction update', style: TfiTokens.body(11, color: TfiTokens.gold, w: FontWeight.w700)),
-            ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _badgeWrap(maxBadges: 2),
+                  const SizedBox(height: 6),
+                  Text(
+                    update.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TfiTokens.body(14, color: TfiTokens.textHi, w: FontWeight.w700),
+                  ),
+                  if (update.shortSummary.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      update.shortSummary,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TfiTokens.body(12, color: TfiTokens.textMid),
+                    ),
+                  ],
+                  if (update.publishedAt != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      formatRelativeTime(update.publishedAt),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TfiTokens.body(10, color: TfiTokens.textLo),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerticalCard(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: TfiCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(TfiTokens.rCard),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: TfiNetworkImage(
+                  url: update.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholderKind: TfiPlaceholderKind.update,
+                  placeholderTitle: update.title,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _badgeWrap(),
             const SizedBox(height: 8),
             Text(
               update.title,
-              style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w700),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              style: TfiTokens.title(16, w: FontWeight.w800),
             ),
-            const SizedBox(height: 6),
-            Text(
-              update.shortSummary,
-              style: TfiTokens.body(13, color: TfiTokens.textMid),
-              maxLines: compact ? 2 : 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (update.shortSummary.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                update.shortSummary,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TfiTokens.body(13, color: TfiTokens.textMid),
+              ),
+            ],
             if (update.publishedAt != null) ...[
               const SizedBox(height: 4),
-              Text(formatRelativeTime(update.publishedAt), style: TfiTokens.body(11, color: TfiTokens.textLo)),
+              Text(
+                formatRelativeTime(update.publishedAt),
+                style: TfiTokens.body(11, color: TfiTokens.textLo),
+              ),
             ],
             if (update.hero != null || update.movie != null) ...[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
+                runSpacing: 4,
                 children: [
-                  if (update.hero != null) TfiChip(label: update.hero!.name, icon: update.hero!.iconEmoji),
-                  if (update.movie != null) TfiChip(label: update.movie!.title, color: TfiTokens.gold),
+                  if (update.hero != null)
+                    Text(
+                      '${update.hero!.iconEmoji ?? ''} ${update.hero!.name}'.trim(),
+                      style: TfiTokens.body(11, color: TfiTokens.textLo),
+                    ),
+                  if (update.movie != null)
+                    Text(
+                      update.movie!.title,
+                      style: TfiTokens.body(11, color: TfiTokens.gold),
+                    ),
                 ],
-              ),
-            ],
-            if (update.reactions != null && update.reactions!.total > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                '🔥 ${update.reactions!.fire}  💪 ${update.reactions!.mass}  ❤️ ${update.reactions!.love}  ⏳ ${update.reactions!.wait}',
-                style: TfiTokens.body(11, color: TfiTokens.textLo),
               ),
             ],
             const SizedBox(height: 10),
@@ -104,18 +170,27 @@ class UpdateCard extends StatelessWidget {
                 const Spacer(),
                 if (onSetAlert != null)
                   IconButton(
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
                     icon: const Icon(Icons.notifications_outlined, size: 20),
                     color: TfiTokens.gold,
                     onPressed: onSetAlert,
-                    tooltip: 'Set alert',
                   ),
                 if (onSave != null)
                   IconButton(
-                    icon: Icon(update.isSaved ? Icons.bookmark : Icons.bookmark_border, color: TfiTokens.gold, size: 22),
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      update.isSaved ? Icons.bookmark : Icons.bookmark_border,
+                      color: TfiTokens.gold,
+                      size: 22,
+                    ),
                     onPressed: onSave,
                   ),
                 if (onShare != null)
                   IconButton(
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
                     icon: const Icon(Icons.share_outlined, color: TfiTokens.textMid, size: 22),
                     onPressed: onShare,
                   ),
@@ -127,5 +202,23 @@ class UpdateCard extends StatelessWidget {
     );
   }
 
-  String _categoryLabel(String c) => c.replaceAll('_', ' ');
+  Widget _badgeWrap({int? maxBadges}) {
+    final badges = <Widget>[
+      TfiBadge(_shortCategory(update.category)),
+      TfiBadge(_shortStatus(update.status)),
+    ];
+    final list = maxBadges != null ? badges.take(maxBadges).toList() : badges;
+    return Wrap(spacing: 6, runSpacing: 4, children: list);
+  }
+
+  String _shortCategory(String c) {
+    final s = c.replaceAll('_', ' ');
+    return s.length > 12 ? s.substring(0, 12) : s;
+  }
+
+  String _shortStatus(String s) {
+    final u = s.toUpperCase();
+    if (u.length <= 10) return u;
+    return u.substring(0, 10);
+  }
 }

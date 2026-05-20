@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../widgets/tfi_cinematic_components.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -9,38 +9,33 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      ('Notifications', '/profile/notification-preferences'),
+      ('Notification Preferences', '/profile/notification-preferences'),
       ('Language', null),
       ('Privacy', null),
       ('Terms', null),
-      ('About TFI', null),
+      ('About TFI Bagundali', null),
     ];
-    return TfiScreen(
+    return TfiScaffold(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-            child: Row(
-              children: [
-                BackButtonCircle(onTap: () => context.pop()),
-                const SizedBox(width: 8),
-                Text('SETTINGS', style: TfiTokens.display(26, color: TfiTokens.textHi)),
-              ],
-            ),
-          ),
+          TfiDetailAppBar(title: 'Settings', onBack: () => context.pop()),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(TfiTokens.padScreen),
               itemCount: items.length,
               itemBuilder: (_, i) {
                 final item = items[i];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: TfiCard(
-                    child: ListTile(
-                      title: Text(item.$1, style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w600)),
-                      trailing: const Icon(Icons.chevron_right, color: TfiTokens.textFaint),
-                      onTap: item.$2 != null ? () => context.push(item.$2!) : null,
+                    onTap: item.$2 != null ? () => context.push(item.$2!) : null,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(item.$1, style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w600)),
+                        ),
+                        if (item.$2 != null) const Icon(Icons.chevron_right_rounded, color: TfiTokens.textFaint),
+                      ],
                     ),
                   ),
                 );

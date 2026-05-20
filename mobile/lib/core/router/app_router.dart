@@ -15,6 +15,7 @@ import '../../features/movies/movie_detail_screen.dart';
 import '../../features/reviews/movie_reviews_screen.dart';
 import '../../features/reviews/movie_review_detail_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
+import '../../features/polls/poll_detail_screen.dart';
 import '../../features/polls/polls_screen.dart';
 import '../../features/profile/downloads_screen.dart';
 import '../../features/profile/favourite_hero_screen.dart';
@@ -187,7 +188,7 @@ GoRouter createRouter(AuthProvider auth) {
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, state) {
             final data = state.extra as Map<String, dynamic>?;
-            return HomeScreen(userName: data?['userName'] as String?);
+            return const HomeScreen();
           })]),
           StatefulShellBranch(routes: [GoRoute(path: '/quiz', builder: (_, _) => const QuizScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/explore', builder: (_, _) => const ExploreScreen())]),

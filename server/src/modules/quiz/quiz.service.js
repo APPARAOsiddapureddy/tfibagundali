@@ -12,6 +12,7 @@ function stripQuestion(q) {
     difficulty: q.difficulty,
     question_text: q.question_text,
     question_telugu: q.question_telugu,
+    image_url: q.image_url,
     options: { a: q.option_a, b: q.option_b, c: q.option_c, d: q.option_d },
     time_limit_seconds: q.difficulty === 'hard' ? 10 : q.difficulty === 'medium' ? 12 : 15,
   };

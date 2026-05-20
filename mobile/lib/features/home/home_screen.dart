@@ -1,648 +1,497 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/services/update_actions.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/daily_quiz_strip.dart';
-import '../../widgets/ticket_update_card.dart';
-import '../../widgets/tfi_widgets.dart';
-
-// ─── Mock update data ───────────────────────────────────────────
-// IMAGES: Each card uses a LANDSCAPE movie still (16:9 friendly).
-// CDN-resized via Amazon _V1_QL75_UX800_ params — no local download needed.
-//
-// TODO [ADMIN]: When adding new updates, provide a landscape movie still
-// (screenshot/frame from trailer) for the card image. Use the helper
-// script at scripts/image_url_helper.dart to generate optimized URLs.
-// The admin panel should let you preview the image at 16:9 before publishing.
-const _mockUpdates = <TicketUpdateData>[
-  // Peddi — Ram Charan landscape still from IMDB gallery
-  TicketUpdateData(
-    title: 'Peddi locks June 4 release',
-    summary:
-        "Ram Charan's Peddi is set for grand theatrical release. Buchi Babu Sana directs. Music by AR Rahman.",
-    timeAgo: '32m ago',
-    category: 'RELEASE',
-    imageUrl:
-        'https://m.media-amazon.com/images/M/MV5BNGI2MmNhNzktNWJkMC00YmM0LTgzNzktMDY3MzZjYjNlOTU3XkEyXkFqcGc@._V1_QL75_UX800_.jpg',
-    tags: ['Ram Charan', 'Peddi', 'Buchi Babu'],
-    likes: 42100,
-  ),
-  // Devara 2 — NTR poster from IMDB (tt31629818)
-  TicketUpdateData(
-    title: 'Devara 2 first look on Aug 1',
-    summary:
-        'Koratala Siva confirms first look at NTR\'s birthday eve. Trailer to follow within 3 weeks.',
-    timeAgo: '2h ago',
-    category: 'TRAILER',
-    imageUrl:
-        'https://m.media-amazon.com/images/M/MV5BZjdkZjI3MTAtMDRkNi00N2JlLTkyYmMtYmM5M2JlYjQwOTAwXkEyXkFqcGc@._V1_QL75_UX800_.jpg',
-    tags: ['NTR', 'Koratala Siva', 'Devara 2'],
-    likes: 38500,
-  ),
-  // Spirit — Prabhas landscape still from IMDB gallery
-  TicketUpdateData(
-    title: 'Spirit final schedule begins in Goa',
-    summary:
-        'Sandeep Reddy Vanga reportedly starts the climax block. Triptii Dimri joins shoot.',
-    timeAgo: '4h ago',
-    category: 'SHOOTING',
-    imageUrl:
-        'https://m.media-amazon.com/images/M/MV5BOGY5NThjZmItNjJlMC00NTc5LTgxMGYtYTgxMDM2N2EzNWYzXkEyXkFqcGc@._V1_QL75_UX800_.jpg',
-    tags: ['Prabhas', 'Sandeep Vanga'],
-    likes: 21300,
-  ),
-  // Kuberaa — Dhanush landscape still from IMDB gallery
-  TicketUpdateData(
-    title: 'Kuberaa secures Netflix premiere',
-    summary:
-        "Sekhar Kammula's Kuberaa to stream 4 weeks after theatrical run. Dhanush starrer set to break records.",
-    timeAgo: '6h ago',
-    category: 'OTT',
-    imageUrl:
-        'https://m.media-amazon.com/images/M/MV5BMDRjZjY2YTMtMjJmMi00NzkyLWJjM2EtYTBhYTViMDczMDg5XkEyXkFqcGc@._V1_QL75_UX800_.jpg',
-    tags: ['Dhanush', 'Sekhar Kammula', 'Netflix'],
-    likes: 14800,
-  ),
-  // Pushpa 3 — Allu Arjun poster from IMDB (tt34915500)
-  TicketUpdateData(
-    title: 'Pushpa 3 muhurat buzz',
-    summary:
-        'Industry whispers suggest Sukumar–Allu Arjun reunion ready by mid-2027. Awaiting official confirmation.',
-    timeAgo: '8h ago',
-    category: 'GENERAL',
-    imageUrl:
-        'https://m.media-amazon.com/images/M/MV5BYWEyY2FkNWQtNWZlNi00YTVkLTk1YTUtNDU5NzcyMjk4NzI3XkEyXkFqcGc@._V1_QL75_UX800_.jpg',
-    tags: ['Allu Arjun', 'Sukumar'],
-    likes: 9400,
-  ),
-];
-
-// ─── Mock trending data ─────────────────────────────────────────
-// IMAGES: Trending tiles use PORTRAIT POSTERS (2:3 ratio, 400px wide).
-// Each movie uses its own poster — not cross-movie.
-//
-// TODO [ADMIN]: Use portrait movie posters for trending tiles.
-// Run posterUrl() from scripts/image_url_helper.dart to generate URLs.
-const _mockTrending = [
-  (
-    'Devara 2',
-    'NTR · Koratala Siva',
-    '2h',
-    // Devara 2 poster (portrait) — IMDB tt31629818
-    'https://m.media-amazon.com/images/M/MV5BZjdkZjI3MTAtMDRkNi00N2JlLTkyYmMtYmM5M2JlYjQwOTAwXkEyXkFqcGc@._V1_QL80_UX400_.jpg',
-  ),
-  (
-    'Spirit',
-    'Prabhas · Sandeep',
-    '4h',
-    // Spirit poster (portrait)
-    'https://m.media-amazon.com/images/M/MV5BNTc0YzJhM2YtNjJlYy00YjE2LThjMjAtNzM1MGJiMWUyOGJkXkEyXkFqcGc@._V1_QL80_UX400_.jpg',
-  ),
-  (
-    'Kuberaa',
-    'Dhanush · Sekhar Kammula',
-    '6h',
-    // Kuberaa poster (portrait)
-    'https://m.media-amazon.com/images/M/MV5BYWYyZDEwZTEtMWZiMi00YzUwLTkwMzUtNzFmZDI5ZjhjYTYzXkEyXkFqcGc@._V1_QL80_UX400_.jpg',
-  ),
-  (
-    'Peddi',
-    'Ram Charan · Buchi Babu',
-    '8h',
-    // Peddi poster (portrait)
-    'https://m.media-amazon.com/images/M/MV5BNWEzOTBlNmUtOGMzNy00ZGZiLWJmNTMtYjRlNzE2YWFmZWI3XkEyXkFqcGc@._V1_QL80_UX400_.jpg',
-  ),
-];
-
-// ─── Mock upcoming releases ─────────────────────────────────────
-// IMAGES: Release posters use PORTRAIT POSTERS (2:3 ratio, 400px wide).
-// Each movie uses its own poster.
-//
-// TODO [ADMIN]: Use portrait movie posters for upcoming release tiles.
-// Run posterUrl() from scripts/image_url_helper.dart to generate URLs.
-const _mockReleases = [
-  // Peddi poster
-  ('PEDDI', 'పెద్ది', 'Jun 4, 2026', '16 DAYS', 'peddi-id', 'https://m.media-amazon.com/images/M/MV5BNWEzOTBlNmUtOGMzNy00ZGZiLWJmNTMtYjRlNzE2YWFmZWI3XkEyXkFqcGc@._V1_QL80_UX400_.jpg'),
-  // Devara 2 poster — IMDB tt31629818
-  ('DEVARA 2', 'దేవర 2', 'Aug 15', '89 days', 'devara2-id', 'https://m.media-amazon.com/images/M/MV5BZjdkZjI3MTAtMDRkNi00N2JlLTkyYmMtYmM5M2JlYjQwOTAwXkEyXkFqcGc@._V1_QL80_UX400_.jpg'),
-  // Spirit poster
-  ('SPIRIT', 'స్పిరిట్', 'Oct 2', '135 days', 'spirit-id', 'https://m.media-amazon.com/images/M/MV5BNTc0YzJhM2YtNjJlYy00YjE2LThjMjAtNzM1MGJiMWUyOGJkXkEyXkFqcGc@._V1_QL80_UX400_.jpg'),
-  // Pushpa 3 poster — IMDB tt34915500 (Allu Arjun)
-  ('PUSHPA 3', 'పుష్ప 3', 'Sankranthi', '240 days', 'pushpa3-id', 'https://m.media-amazon.com/images/M/MV5BYWEyY2FkNWQtNWZlNi00YTVkLTk1YTUtNDU5NzcyMjk4NzI3XkEyXkFqcGc@._V1_QL80_UX400_.jpg'),
-  // Kuberaa poster
-  ('KUBERAA', 'కుబేర', 'Jun 20', '32 days', 'kuberaa-id', 'https://m.media-amazon.com/images/M/MV5BYWYyZDEwZTEtMWZiMi00YzUwLTkwMzUtNzFmZDI5ZjhjYTYzXkEyXkFqcGc@._V1_QL80_UX400_.jpg'),
-];
-
-// ─── Filters (4th tab = Upcoming Releases) ──────────────────────
-const _filterLabels = ['All', 'My Hero', 'Movie Reviews', 'Upcoming Releases'];
+import '../../core/theme/tfi_responsive.dart';
+import '../../core/utils/format_utils.dart';
+import '../../models/models.dart';
+import '../../widgets/empty_error_state.dart';
+import '../../widgets/tfi_cinematic_components.dart';
+import '../../widgets/tfi_network_image.dart';
+import '../../widgets/tfi_poster_placeholder.dart';
+import '../../data/static_explore_content.dart';
+import '../../widgets/update_card.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.userName});
-  final String? userName;
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _activeFilter = 0;
+  HomeFeedModel? _feed;
+  bool _loading = true;
+  String? _error;
+  final Set<String> _savedOverrides = {};
 
-  /// Mock-filtered list based on active filter.
-  List<TicketUpdateData> get _filteredUpdates {
-    if (_activeFilter == 0) return _mockUpdates; // All
-    if (_activeFilter == 1) {
-      // My Hero — mock: show cards 0 & 2 (Ram Charan, Prabhas)
-      return [_mockUpdates[0], _mockUpdates[2]];
-    }
-    if (_activeFilter == 2) {
-      // Movie Reviews — mock: show cards 1 & 3
-      return [_mockUpdates[1], _mockUpdates[3]];
-    }
-    // Upcoming Releases (index 3) — handled separately, returns empty
-    return [];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().events.trackAppOpened();
+    });
   }
 
-  /// Whether the "Upcoming Releases" tab is active.
-  bool get _isReleasesTab => _activeFilter == 3;
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final feed = await context.read<AuthProvider>().api.getHomeFeed();
+      if (mounted) {
+        setState(() {
+          _feed = feed;
+          _loading = false;
+        });
+        context.read<AuthProvider>().events.track('home_feed_viewed', sourceScreen: 'home');
+        context.read<AuthProvider>().events.cardImpressions.clear();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = userFacingError(e);
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  TFIUpdateModel _parseUpdate(Map<String, dynamic> j) {
+    final u = TFIUpdateModel.fromJson(j);
+    if (_savedOverrides.contains(u.id)) {
+      return TFIUpdateModel(
+        id: u.id,
+        title: u.title,
+        shortSummary: u.shortSummary,
+        category: u.category,
+        status: u.status,
+        priority: u.priority,
+        imageUrl: u.imageUrl,
+        hero: u.hero,
+        movie: u.movie,
+        publishedAt: u.publishedAt,
+        reactions: u.reactions,
+        isSaved: true,
+        hasReacted: u.hasReacted,
+        reason: u.reason,
+      );
+    }
+    return u;
+  }
+
+  void _openUpdate(String id) {
+    context.push('/updates/$id');
+  }
 
   @override
   Widget build(BuildContext context) {
-    final updates = _filteredUpdates;
-
-    return TfiScreen(
-      child: CustomScrollView(
-        slivers: [
-          // ── Top bar (greeting) ──
-          SliverToBoxAdapter(
-            child: TfiTopBar(user: widget.userName ?? 'Fan'),
-          ),
-
-          // ── Daily quiz strip ──
-          SliverToBoxAdapter(
-            child: DailyQuizStrip(
-              onTap: () => _navigateToQuiz(context),
-            ),
-          ),
-
-          // ── Filter chips (scrollable) ──
-          SliverToBoxAdapter(
-            child: _buildFilterChips(),
-          ),
-
-          // ── Feed content ──
-          if (_isReleasesTab)
-            // Show upcoming releases grid
-            SliverToBoxAdapter(child: _buildReleasesGrid())
-          else
-            SliverList(
-              delegate: SliverChildListDelegate(
-                _buildFeedItems(updates),
-              ),
-            ),
-
-          // Bottom padding for tab bar
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 24),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Navigate to the Quiz tab (index 1 in the shell).
-  void _navigateToQuiz(BuildContext context) {
-    context.go('/quiz');
-  }
-
-  /// Build scrollable filter chip row.
-  Widget _buildFilterChips() {
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-        itemCount: _filterLabels.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final active = i == _activeFilter;
-          return GestureDetector(
-            onTap: () {
-              if (i == 2) {
-                // Movie Reviews chip → navigate to reviews screen
-                context.push('/reviews');
-              } else {
-                setState(() => _activeFilter = i);
-              }
-            },
-            child: TfiChip(
-              label: _filterLabels[i],
-              active: active,
-              color: TfiTokens.fire,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// Build the interleaved feed: cards + trending section.
-  List<Widget> _buildFeedItems(List<TicketUpdateData> updates) {
-    final items = <Widget>[];
-
-    // Card 1
-    if (updates.isNotEmpty) {
-      items.add(TicketUpdateCard(data: updates[0]));
-    }
-
-    // Card 2
-    if (updates.length > 1) {
-      items.add(TicketUpdateCard(data: updates[1]));
-    }
-
-    // ── Trending Now section ──
-    if (_activeFilter == 0) {
-      items.add(_buildTrendingSection());
-    }
-
-    // Remaining cards
-    for (int i = 2; i < updates.length; i++) {
-      items.add(TicketUpdateCard(data: updates[i]));
-    }
-
-    return items;
-  }
-
-  /// Redesigned trending section — taller cards with poster images, title overlay.
-  Widget _buildTrendingSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 4),
-        SectionTitle(
-          title: 'Trending Now',
-          telugu: 'ట్రెండింగ్ ఇప్పుడు',
-          action: 'See all',
-          onAction: () => context.push('/updates'),
-        ),
-        SizedBox(
-          height: 200,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _mockTrending.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 12),
-            itemBuilder: (context, i) {
-              final t = _mockTrending[i];
-              return _TrendingCard(
-                title: t.$1,
-                subtitle: t.$2,
-                timeAgo: t.$3,
-                imageUrl: t.$4,
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  /// Build the Upcoming Releases grid (shown when 4th filter tab is active).
-  Widget _buildReleasesGrid() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'రాబోయే విడుదలలు',
-            style: TfiTokens.telugu(12, color: TfiTokens.textLo),
-          ),
-          const SizedBox(height: 14),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.58,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 14,
-            ),
-            itemCount: _mockReleases.length,
-            itemBuilder: (context, i) {
-              final r = _mockReleases[i];
-              return GestureDetector(
-                onTap: () => context.push('/movies/${r.$5}'),
-                child: _ReleasePoster(
-                  title: r.$1,
-                  telugu: r.$2,
-                  date: r.$3,
-                  countdown: r.$4,
-                  imageUrl: r.$6,
-                  isUrgent: i == 0,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Redesigned trending card with image background.
-class _TrendingCard extends StatelessWidget {
-  const _TrendingCard({
-    required this.title,
-    required this.subtitle,
-    required this.timeAgo,
-    required this.imageUrl,
-  });
-
-  final String title;
-  final String subtitle;
-  final String timeAgo;
-  final String imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    // Generate fallback gradient from title
-    final hash = title.codeUnits.fold(0, (a, b) => a + b);
-    final gradients = [
-      [const Color(0xFFFF7A1A), const Color(0xFFE63950), const Color(0xFF1B1530)],
-      [const Color(0xFF8B5CF6), const Color(0xFF2563EB), const Color(0xFF0B0E1A)],
-      [const Color(0xFFF59E0B), const Color(0xFFDC2626), const Color(0xFF1B1530)],
-    ];
-    final fallbackColors = gradients[hash % 3];
-
-    return Container(
-      width: 155,
-      height: 200,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: imageUrl.isEmpty
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: fallbackColors,
-              )
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background image or gradient
-          if (imageUrl.isNotEmpty)
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, e, st) => Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: fallbackColors,
-                  ),
-                ),
-              ),
-            ),
-
-          // Dark gradient overlay for text readability
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.1),
-                  Colors.black.withValues(alpha: 0.25),
-                  Colors.black.withValues(alpha: 0.85),
-                ],
-                stops: const [0.0, 0.5, 1.0],
-              ),
-            ),
-          ),
-
-          // Trending badge
-          Positioned(
-            top: 10,
-            left: 10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: TfiTokens.fire.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.trending_up_rounded, size: 12, color: Colors.white),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Trending',
-                    style: TfiTokens.body(10, color: Colors.white, w: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Bottom content
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TfiTokens.display(16, color: Colors.white),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TfiTokens.body(11, color: Colors.white70, w: FontWeight.w600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$timeAgo ago',
-                  style: TfiTokens.mono(9, color: TfiTokens.goldWarm, w: FontWeight.w700),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Release poster card with real movie image and countdown badge.
-class _ReleasePoster extends StatelessWidget {
-  const _ReleasePoster({
-    required this.title,
-    required this.telugu,
-    required this.date,
-    required this.countdown,
-    required this.imageUrl,
-    this.isUrgent = false,
-  });
-
-  final String title;
-  final String telugu;
-  final String date;
-  final String countdown;
-  final String imageUrl;
-  final bool isUrgent;
-
-  @override
-  Widget build(BuildContext context) {
-    // Fallback gradient
-    final hash = title.codeUnits.fold(0, (a, b) => a + b);
-    final gradients = [
-      [const Color(0xFFFF7A1A), const Color(0xFFE63950), const Color(0xFF1B1530)],
-      [const Color(0xFF8B5CF6), const Color(0xFF2563EB), const Color(0xFF0B0E1A)],
-      [const Color(0xFFF59E0B), const Color(0xFFDC2626), const Color(0xFF1B1530)],
-    ];
-    final fallbackColors = gradients[hash % 3];
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: imageUrl.isEmpty
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: fallbackColors,
-              )
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background image
-          if (imageUrl.isNotEmpty)
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, e, st) => Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: fallbackColors,
-                  ),
-                ),
-              ),
-            ),
-
-          // Dark gradient overlay
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.0),
-                  Colors.black.withValues(alpha: 0.2),
-                  Colors.black.withValues(alpha: 0.85),
-                ],
-                stops: const [0.0, 0.45, 1.0],
-              ),
-            ),
-          ),
-
-          // Countdown badge (top)
-          Positioned(
-            top: 10,
-            left: 10,
-            right: 10,
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isUrgent
-                        ? TfiTokens.fireDeep.withValues(alpha: 0.9)
-                        : Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+    return TfiScaffold(
+      child: RefreshIndicator(
+        onRefresh: _load,
+        color: TfiTokens.gold,
+        child: _loading
+            ? _buildSkeleton()
+            : _error != null
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      Icon(
-                        isUrgent ? Icons.access_time_filled_rounded : Icons.calendar_today_rounded,
-                        size: 11,
-                        color: Colors.white,
+                      const SizedBox(height: 80),
+                      ErrorState(message: _error!, onRetry: _load),
+                    ],
+                  )
+                : CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: TfiHomeTopBar(
+                          subtitle: _feed?.greeting?['subtitle'] as String? ?? 'Today in TFI',
+                          onSearch: () => context.push('/search'),
+                          onNotifications: () => context.push('/profile/notifications'),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        countdown,
-                        style: TfiTokens.mono(9, color: Colors.white, w: FontWeight.w800),
+                      ..._buildSectionSlivers(),
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: TfiResponsive.scrollBottomPadding(context)),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
+      ),
+    );
+  }
 
-          // Title + date (bottom)
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TfiTokens.display(15, color: Colors.white),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  telugu,
-                  style: TfiTokens.telugu(10, color: Colors.white70),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: TfiTokens.gold.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: TfiTokens.gold.withValues(alpha: 0.4)),
-                  ),
-                  child: Text(
-                    date,
-                    style: TfiTokens.mono(10, color: TfiTokens.goldWarm, w: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildSkeleton() {
+    return ListView(
+      padding: const EdgeInsets.all(TfiTokens.padScreen),
+      children: List.generate(
+        4,
+        (_) => Shimmer.fromColors(
+          baseColor: TfiTokens.card1,
+          highlightColor: TfiTokens.card3,
+          child: const TfiShimmerCard(height: 180),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildSectionSlivers() {
+    final sections = _feed?.sections ?? [];
+    if (sections.isEmpty) {
+      return [
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: EmptyState(message: 'No updates yet — pull to refresh', icon: '🎬'),
           ),
+        ),
+      ];
+    }
+
+    return sections.map((section) {
+      final items = section.items;
+      if (items.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+      return SliverList(
+        delegate: SliverChildListDelegate([
+          TfiSectionHeader(
+            title: section.title,
+            subtitle: section.subtitle,
+            actionLabel: _viewAllLabel(section.type),
+            onAction: _viewAllLabel(section.type) != null ? () => _onViewAll(section.type) : null,
+          ),
+          ..._buildSectionItems(section.type, items),
+        ]),
+      );
+    }).toList();
+  }
+
+  String? _viewAllLabel(String type) {
+    if (type.contains('update') || type == 'today_in_tfi' || type == 'trending_updates') {
+      return 'View all';
+    }
+    if (type == 'explore_preview') return 'Explore';
+    if (type == 'quiz_preview') return 'Quiz';
+    if (type == 'poll_preview') return 'Polls';
+    return null;
+  }
+
+  void _onViewAll(String type) {
+    if (type.contains('quiz')) {
+      context.go('/quiz');
+    } else if (type.contains('poll')) {
+      context.go('/polls');
+    } else if (type.contains('explore')) {
+      context.go('/explore');
+    } else {
+      context.push('/updates');
+    }
+  }
+
+  List<Widget> _buildSectionItems(String type, List<Map<String, dynamic>> items) {
+    final ctx = context;
+    if (type == 'today_in_tfi' && items.isNotEmpty) {
+      final j = items.first;
+      final u = _parseUpdate(j);
+      return [
+        TfiImageCard(
+          title: u.title,
+          subtitle: u.shortSummary,
+          imageUrl: u.imageUrl,
+          badge: u.category,
+          height: TfiResponsive.heroImageCardHeight(ctx),
+          placeholderKind: TfiPlaceholderKind.update,
+          onTap: () => _openUpdate(u.id),
+          footer: TfiReactionRow(counts: _reactionMap(u.reactions)),
+        ),
+        _updateActionsRow(u),
+      ];
+    }
+
+    if (type == 'breaking_updates' || type == 'trending_updates') {
+      final cardW = TfiResponsive.horizontalCardWidth(ctx);
+      return [
+        SizedBox(
+          height: 128,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, i) {
+              final u = _parseUpdate(items[i]);
+              return SizedBox(
+                width: cardW,
+                child: UpdateCard(
+                  update: u,
+                  raw: items[i],
+                  compact: true,
+                  onTap: () => _openUpdate(u.id),
+                  onSave: () => _toggleSave(u),
+                  onShare: () => UpdateActions.share(context, u),
+                  onSetAlert: () => UpdateActions.setAlert(context, items[i]),
+                ),
+              );
+            },
+          ),
+        ),
+      ];
+    }
+
+    if (type == 'upcoming_releases' || type == 'movie_calendar') {
+      return [
+        SizedBox(
+          height: TfiResponsive.horizontalRailHeight(ctx),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, i) => _MovieReleaseTile(item: items[i]),
+          ),
+        ),
+      ];
+    }
+
+    if (type == 'quiz_preview') {
+      final j = items.first;
+      return [
+        TfiCard(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2A1545), Color(0xFF121622), Color(0xFF1A2033)],
+          ),
+          onTap: () => context.go('/quiz'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const TfiBadge('QUIZ', variant: 'QUIZ'),
+              const SizedBox(height: 8),
+              Text(
+                j['title'] as String? ?? "Today's Movie Trivia",
+                style: TfiTokens.title(16, w: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                j['subtitle'] as String? ?? 'Test your TFI knowledge',
+                style: TfiTokens.body(12, color: TfiTokens.textLo),
+              ),
+              const SizedBox(height: 12),
+              TfiPrimaryButton(label: 'Play Now', onPressed: () => context.go('/quiz')),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    if (type == 'poll_preview') {
+      final j = items.first;
+      return [
+        TfiCard(
+          onTap: () {
+            final id = j['id'] as String?;
+            if (id != null) {
+              context.push('/polls/$id');
+            } else {
+              context.go('/polls');
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const TfiBadge('POLL', variant: 'POLL'),
+              const SizedBox(height: 8),
+              Text(
+                j['question'] as String? ?? j['title'] as String? ?? 'Fan opinion poll',
+                style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TfiSecondaryButton(
+                  label: 'Vote Now',
+                  onPressed: () {
+                    final id = j['id'] as String?;
+                    if (id != null) context.push('/polls/$id');
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    if (type == 'explore_preview') {
+      final previewItems = items.isNotEmpty ? items : StaticExploreContent.explorePreviewItems;
+      final thumbW = TfiResponsive.exploreThumbWidth(ctx);
+      return [
+        SizedBox(
+          height: 156,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
+            itemCount: previewItems.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (_, i) {
+              final j = previewItems[i];
+              final url = j['image_url'] as String? ?? j['thumbnail_url'] as String?;
+              return GestureDetector(
+                onTap: () {
+                  final id = j['id'] as String?;
+                  final kind = j['content_type'] as String? ?? j['type'] as String? ?? '';
+                  if (id == null) {
+                    context.go('/explore');
+                    return;
+                  }
+                  if (kind.contains('status')) {
+                    context.push('/status-cards/$id');
+                  } else {
+                    context.push('/wallpapers/$id');
+                  }
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(TfiTokens.rCard),
+                  child: SizedBox(
+                    width: thumbW,
+                    height: 156,
+                    child: TfiNetworkImage(
+                    url: url,
+                    width: thumbW,
+                    height: 156,
+                    placeholderKind: TfiPlaceholderKind.wallpaper,
+                    placeholderTitle: j['title'] as String?,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ];
+    }
+
+    // Default: vertical update cards (my hero, etc.)
+    return items.map((j) {
+      final u = _parseUpdate(j);
+      return UpdateCard(
+        update: u,
+        raw: j,
+        compact: type == 'my_hero_updates',
+        onTap: () => _openUpdate(u.id),
+        onSave: () => _toggleSave(u),
+        onShare: () => UpdateActions.share(context, u),
+        onSetAlert: () => UpdateActions.setAlert(context, j),
+      );
+    }).toList();
+  }
+
+  Map<String, int>? _reactionMap(ReactionCounts? r) {
+    if (r == null) return null;
+    return {'fire': r.fire, 'mass': r.mass, 'love': r.love, 'wait': r.wait, 'total': r.total};
+  }
+
+  Widget _updateActionsRow(TFIUpdateModel u) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _actionIcon(Icons.bookmark_outline, u.isSaved, () => _toggleSave(u)),
+          _actionIcon(Icons.share_outlined, false, () => UpdateActions.share(context, u)),
+          _actionIcon(Icons.notifications_active_outlined, false, () => UpdateActions.setAlert(context, {'id': u.id, 'title': u.title})),
         ],
+      ),
+    );
+  }
+
+  Widget _actionIcon(IconData icon, bool active, VoidCallback onTap) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, color: active ? TfiTokens.gold : TfiTokens.textMid),
+    );
+  }
+
+  Future<void> _toggleSave(TFIUpdateModel u) async {
+    final api = context.read<AuthProvider>().api;
+    try {
+      if (u.isSaved) {
+        await api.unsaveUpdate(u.id);
+        _savedOverrides.remove(u.id);
+      } else {
+        await api.saveUpdate(u.id);
+        _savedOverrides.add(u.id);
+      }
+      setState(() {});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(userFacingError(e))));
+      }
+    }
+  }
+}
+
+class _MovieReleaseTile extends StatelessWidget {
+  const _MovieReleaseTile({required this.item});
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = item['title'] as String? ?? item['title_telugu'] as String? ?? 'Movie';
+    final poster = item['poster_url'] as String? ?? item['image_url'] as String?;
+    final days = item['days_to_release'] as int?;
+    final id = item['id'] as String?;
+
+    final tileW = TfiResponsive.moviePosterTileWidth(context);
+
+    return GestureDetector(
+      onTap: id != null ? () => context.push('/movies/$id') : null,
+      child: Container(
+        width: tileW,
+        decoration: BoxDecoration(
+          color: TfiTokens.card1,
+          borderRadius: BorderRadius.circular(TfiTokens.rCard),
+          border: Border.all(color: TfiTokens.lineStrong),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(TfiTokens.rCard)),
+              child: AspectRatio(
+                aspectRatio: 2 / 3,
+                child: TfiNetworkImage(
+                  url: poster,
+                  fit: BoxFit.cover,
+                  placeholderKind: TfiPlaceholderKind.movie,
+                  placeholderTitle: title,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TfiTokens.body(12, color: TfiTokens.textHi, w: FontWeight.w700),
+                  ),
+                  if (days != null) ...[
+                    const SizedBox(height: 6),
+                    TfiCountdownChip('$days days'),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

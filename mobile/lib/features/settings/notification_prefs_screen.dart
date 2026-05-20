@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../widgets/tfi_cinematic_components.dart';
 
 class NotificationPrefsScreen extends StatefulWidget {
   const NotificationPrefsScreen({super.key});
@@ -14,6 +14,7 @@ class NotificationPrefsScreen extends StatefulWidget {
 
 class _NotificationPrefsScreenState extends State<NotificationPrefsScreen> {
   Map<String, bool> _prefs = {};
+  Map<String, bool> _rollback = {};
   bool _loading = true;
 
   static const _labels = {
@@ -42,6 +43,7 @@ class _NotificationPrefsScreenState extends State<NotificationPrefsScreen> {
       if (mounted) {
         setState(() {
           _prefs = prefs.map((k, v) => MapEntry(k, v == true));
+          _rollback = Map.from(_prefs);
           _loading = false;
         });
       }
@@ -51,43 +53,38 @@ class _NotificationPrefsScreenState extends State<NotificationPrefsScreen> {
   }
 
   Future<void> _toggle(String key, bool value) async {
+    final prev = _prefs[key];
     setState(() => _prefs[key] = value);
     try {
       await context.read<AuthProvider>().api.patchNotificationPrefs({key: value});
+      _rollback[key] = value;
     } catch (_) {
-      if (mounted) setState(() => _prefs[key] = !value);
+      if (mounted) setState(() => _prefs[key] = prev ?? _rollback[key] ?? false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return TfiScreen(
+    return TfiScaffold(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-            child: Row(
-              children: [
-                BackButtonCircle(onTap: () => context.pop()),
-                const SizedBox(width: 8),
-                Text('Notifications', style: TfiTokens.display(22, color: TfiTokens.textHi)),
-              ],
-            ),
-          ),
+          TfiDetailAppBar(title: 'Notification Preferences', onBack: () => context.pop()),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: TfiTokens.fire))
+                ? const Center(child: CircularProgressIndicator(color: TfiTokens.gold))
                 : ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(TfiTokens.padScreen),
                     children: _labels.entries.map((e) {
                       final on = _prefs[e.key] ?? true;
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: TfiCard(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: TfiGlassPanel(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                           child: SwitchListTile(
-                            title: Text(e.value, style: TfiTokens.body(14, color: TfiTokens.textHi)),
+                            title: Text(e.value, style: TfiTokens.body(14, color: TfiTokens.textHi, w: FontWeight.w600)),
+                            subtitle: Text('Telugu cinema alerts', style: TfiTokens.body(11, color: TfiTokens.textLo)),
                             value: on,
-                            activeThumbColor: TfiTokens.fire,
+                            activeThumbColor: TfiTokens.gold,
                             onChanged: (v) => _toggle(e.key, v),
                           ),
                         ),

@@ -7,6 +7,8 @@ import 'package:tfi_bagundali/core/theme/app_theme.dart';
 
 void main() {
   testWidgets('Login screen has Send OTP button', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 2000));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => AuthProvider(),
@@ -14,6 +16,6 @@ void main() {
       ),
     );
     expect(find.text('Send OTP'), findsOneWidget);
-    expect(find.text('TFI BAGUNDALI'), findsOneWidget);
+    expect(find.text('TFI Bagundali'), findsOneWidget);
   });
 }

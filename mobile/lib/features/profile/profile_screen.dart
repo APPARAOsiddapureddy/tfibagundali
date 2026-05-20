@@ -3,24 +3,61 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../widgets/tfi_cinematic_components.dart';
+import '../../widgets/tfi_poster_placeholder.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  int _savedCount = 0;
+  int _remindersCount = 0;
+  int _quizCount = 0;
+  bool _statsLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final api = context.read<AuthProvider>().api;
+      final results = await Future.wait([
+        api.getSaved(),
+        api.getReminders(),
+        api.getProfileQuizHistory(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _savedCount = results[0].length;
+          _remindersCount = results[1].length;
+          _quizCount = results[2].length;
+          _statsLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _statsLoading = false);
+    }
+  }
 
   Future<void> _logout(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log out?'),
+        backgroundColor: TfiTokens.card1,
+        title: Text('Log out?', style: TfiTokens.title(16)),
+        content: Text('You will need to sign in again.', style: TfiTokens.body(14, color: TfiTokens.textMid)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log out'),
+            child: Text('Log out', style: TextStyle(color: TfiTokens.red, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -35,507 +72,192 @@ class ProfileScreen extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
     final hero = user?.favouriteHero;
-    final memberSince = user?.createdAt?.year.toString() ?? '2026';
+    final phone = user?.phone ?? '';
 
-    return TfiScreen(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: TfiTopBar(
-              title: 'PROFILE',
-              trailing: [
-                GestureDetector(
-                  onTap: () => context.push('/settings'),
-                  child: const Icon(
-                    Icons.settings_outlined,
-                    color: TfiTokens.textHi,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-              child: _ProfileHero(
-                name: auth.displayName,
-                phone: user?.phone ?? '',
-                heroName: hero?.name,
-                heroEmoji: hero?.iconEmoji,
-                memberSince: memberSince,
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _StatsGrid(),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
-              child: _FanProgress(),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: _QuickActions(),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: SectionTitle(title: 'Account'),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              _tile(
-                context,
-                Icons.star_outline,
-                'Favourite hero',
-                'Personalize your fan feed',
-                () => context.push('/profile/favourite-hero'),
-              ),
-              _tile(
-                context,
-                Icons.bookmark_outline,
-                'Saved content',
-                'Updates, movies, wallpapers, cards',
-                () => context.push('/profile/saved'),
-              ),
-              _tile(
-                context,
-                Icons.download_outlined,
-                'Downloads',
-                'Offline wallpapers and status cards',
-                () => context.push('/profile/downloads'),
-              ),
-              _tile(
-                context,
-                Icons.notifications_outlined,
-                'Notifications',
-                'Latest fan alerts',
-                () => context.push('/profile/notifications'),
-              ),
-              _tile(
-                context,
-                Icons.tune,
-                'Notification settings',
-                'Choose what you want to hear about',
-                () => context.push('/profile/notification-preferences'),
-              ),
-              _tile(
-                context,
-                Icons.help_outline,
-                'Help',
-                'Support and app questions',
-                () {},
-              ),
-            ]),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: PrimaryButton(
-                label: 'Log Out',
-                filled: false,
-                onPressed: () => _logout(context),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
-
-  Widget _tile(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String subtitle,
-    VoidCallback onTap,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: TfiCard(
-        child: ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: TfiTokens.fire.withValues(alpha: 0.11),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: TfiTokens.fire, size: 21),
-          ),
-          title: Text(
-            label,
-            style: TfiTokens.body(
-              15,
-              color: TfiTokens.textHi,
-              w: FontWeight.w800,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: TfiTokens.body(11, color: TfiTokens.textLo),
-          ),
-          trailing: const Icon(Icons.chevron_right, color: TfiTokens.textFaint),
-          onTap: onTap,
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileHero extends StatelessWidget {
-  const _ProfileHero({
-    required this.name,
-    required this.phone,
-    required this.heroName,
-    required this.heroEmoji,
-    required this.memberSince,
-  });
-
-  final String name;
-  final String phone;
-  final String? heroName;
-  final String? heroEmoji;
-  final String memberSince;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: TfiTokens.gradMass,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: TfiTokens.fire.withValues(alpha: 0.22),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.28),
-                    width: 2,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  heroEmoji ?? name.characters.first.toUpperCase(),
-                  style: TfiTokens.display(30, color: Colors.white),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return TfiScaffold(
+      child: RefreshIndicator(
+        onRefresh: _loadStats,
+        color: TfiTokens.gold,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 12, TfiTokens.padScreen, 8),
+                child: Row(
                   children: [
-                    Text(
-                      name,
-                      style: TfiTokens.display(
-                        28,
-                        color: Colors.white,
-                        height: 1,
+                    Text('Profile', style: TfiTokens.display(26, color: TfiTokens.gold)),
+                    const Spacer(),
+                    Material(
+                      color: TfiTokens.glass,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: () => context.push('/settings'),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: TfiTokens.line),
+                          ),
+                          child: const Icon(Icons.settings_outlined, size: 20, color: TfiTokens.textMid),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      phone,
-                      style: TfiTokens.body(
-                        12,
-                        color: Colors.white.withValues(alpha: 0.74),
-                        w: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 7,
-                      runSpacing: 7,
-                      children: [
-                        _HeroBadge(label: heroName ?? 'Choose hero'),
-                        _HeroBadge(label: 'Member $memberSince'),
-                      ],
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: const [
-              Expanded(
-                child: _HeroMetric(label: 'Fan Level', value: 'Mass 4'),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: _HeroMetric(label: 'Streak', value: '7d'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroBadge extends StatelessWidget {
-  const _HeroBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.13),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        label,
-        style: TfiTokens.body(11, color: Colors.white, w: FontWeight.w800),
-      ),
-    );
-  }
-}
-
-class _HeroMetric extends StatelessWidget {
-  const _HeroMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.13)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TfiTokens.body(10, color: Colors.white70)),
-          const SizedBox(height: 4),
-          Text(value, style: TfiTokens.display(16, color: Colors.white)),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatsGrid extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // TODO(backend): Replace these demo stats with GET /v1/profile/summary.
-    // Include coins, army points, quiz accuracy, saved count, and current streak.
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      childAspectRatio: 1.58,
-      children: const [
-        _StatCard(
-          icon: Icons.monetization_on_outlined,
-          label: 'Coins',
-          value: '1,245',
-          color: TfiTokens.gold,
-        ),
-        _StatCard(
-          icon: Icons.quiz_outlined,
-          label: 'Quiz Score',
-          value: '18/25',
-          color: TfiTokens.fire,
-        ),
-        _StatCard(
-          icon: Icons.bookmark_outline,
-          label: 'Saved',
-          value: '14',
-          color: TfiTokens.cyan,
-        ),
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return TfiCard(
-      accent: color,
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 21),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: TfiTokens.display(19, color: TfiTokens.textHi),
-                ),
-                const SizedBox(height: 2),
-                Text(label, style: TfiTokens.body(11, color: TfiTokens.textLo)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FanProgress extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return TfiCard(
-      accent: TfiTokens.gold,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Next Level',
-                  style: TfiTokens.body(
-                    13,
-                    color: TfiTokens.textHi,
-                    w: FontWeight.w900,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
+                child: TfiGlassPanel(
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: SizedBox(
+                          width: 72,
+                          height: 72,
+                          child: TfiPosterPlaceholder(
+                            kind: TfiPlaceholderKind.hero,
+                            title: auth.displayName,
+                            width: 72,
+                            height: 72,
+                            borderRadius: BorderRadius.circular(999),
+                            icon: Icons.person_rounded,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(auth.displayName, style: TfiTokens.title(20, w: FontWeight.w800)),
+                            if (phone.isNotEmpty)
+                              Text(phone, style: TfiTokens.body(12, color: TfiTokens.textLo)),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    hero?.name ?? 'No favourite hero',
+                                    style: TfiTokens.telugu(12, color: TfiTokens.gold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => context.push('/profile/favourite-hero'),
+                                  child: const Icon(Icons.edit_outlined, size: 18, color: TfiTokens.gold),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              Text(
-                '760 / 1,000 pts',
-                style: TfiTokens.body(
-                  12,
-                  color: TfiTokens.gold,
-                  w: FontWeight.w800,
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 16, TfiTokens.padScreen, 8),
+                child: _statsLoading
+                    ? const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: TfiTokens.gold)))
+                    : Row(
+                        children: [
+                          Expanded(child: _StatTile(label: 'Saved', value: '$_savedCount', onTap: () => context.push('/profile/saved'))),
+                          const SizedBox(width: 10),
+                          Expanded(child: _StatTile(label: 'Reminders', value: '$_remindersCount', onTap: () => context.push('/profile/reminders'))),
+                          const SizedBox(width: 10),
+                          Expanded(child: _StatTile(label: 'Quizzes', value: '$_quizCount', onTap: () => context.push('/profile/quiz-history'))),
+                        ],
+                      ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: TfiSectionHeader(title: 'Your account')),
+            SliverList(
+              delegate: SliverChildListDelegate([
+                _menuTile(context, Icons.bookmark_outline_rounded, 'Saved Items', 'Updates, movies, wallpapers, cards', '/profile/saved'),
+                _menuTile(context, Icons.download_outlined, 'Downloads', 'Offline wallpapers & cards', '/profile/downloads'),
+                _menuTile(context, Icons.history_rounded, 'Quiz History', 'Past scores & dates', '/profile/quiz-history'),
+                _menuTile(context, Icons.alarm_outlined, 'Reminders', 'Release & event alerts', '/profile/reminders'),
+                _menuTile(context, Icons.notifications_outlined, 'Notifications', 'Latest TFI alerts', '/profile/notifications'),
+                _menuTile(context, Icons.tune_rounded, 'Notification Preferences', 'Choose what you hear about', '/profile/notification-preferences'),
+                _menuTile(context, Icons.star_outline_rounded, 'Favourite Hero', 'Personalize your feed', '/profile/favourite-hero'),
+                _menuTile(context, Icons.settings_outlined, 'Settings', 'App preferences', '/settings'),
+              ]),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 8, TfiTokens.padScreen, 88),
+                child: TextButton(
+                  onPressed: () => _logout(context),
+                  child: Text('Log Out', style: TfiTokens.body(15, color: TfiTokens.red, w: FontWeight.w800)),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          TfiProgressBar(value: 0.76, color: TfiTokens.gold, height: 8),
-          const SizedBox(height: 10),
-          Text(
-            'Vote in polls, finish quizzes, and save content to grow your fan level.',
-            style: TfiTokens.body(12, color: TfiTokens.textMid),
-          ),
-        ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _menuTile(BuildContext context, IconData icon, String title, String subtitle, String route) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 0, TfiTokens.padScreen, 10),
+      child: TfiCard(
+        onTap: () => context.push(route),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: TfiTokens.gold.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: TfiTokens.gold, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w800)),
+                  Text(subtitle, style: TfiTokens.body(11, color: TfiTokens.textLo)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: TfiTokens.textFaint),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _QuickActions extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.bookmark_outline,
-            label: 'Saved',
-            onTap: () => context.push('/profile/saved'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.download_outlined,
-            label: 'Downloads',
-            onTap: () => context.push('/profile/downloads'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
+class _StatTile extends StatelessWidget {
+  const _StatTile({required this.label, required this.value, required this.onTap});
   final String label;
+  final String value;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: TfiTokens.line),
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: TfiTokens.glassCard(radius: 14),
         child: Column(
           children: [
-            Icon(icon, color: TfiTokens.fire, size: 21),
-            const SizedBox(height: 7),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TfiTokens.body(
-                11,
-                color: TfiTokens.textHi,
-                w: FontWeight.w800,
-              ),
-            ),
+            Text(value, style: TfiTokens.display(22, color: TfiTokens.gold)),
+            Text(label, style: TfiTokens.body(11, color: TfiTokens.textLo)),
           ],
         ),
       ),

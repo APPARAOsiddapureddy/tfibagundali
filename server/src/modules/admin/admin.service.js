@@ -81,7 +81,7 @@ async function createUpdate(body) {
 }
 
 async function patchUpdate(id, body) {
-  const fields = ['title', 'short_summary', 'full_summary', 'category', 'trust_status', 'priority', 'is_pinned', 'is_active', 'is_breaking', 'is_trending'];
+  const fields = ['title', 'short_summary', 'full_summary', 'category', 'trust_status', 'priority', 'is_pinned', 'is_active', 'is_breaking', 'is_trending', 'image_url'];
   const sets = [];
   const vals = [];
   let i = 1;

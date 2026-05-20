@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_tokens.dart';
-import 'tfi_widgets.dart';
+import 'tfi_cinematic_components.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({super.key, required this.message, this.icon = '📭'});
@@ -43,7 +43,7 @@ class ErrorState extends StatelessWidget {
             Text(message, textAlign: TextAlign.center, style: TfiTokens.body(14, color: TfiTokens.red)),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              PrimaryButton(label: 'Retry', filled: false, onPressed: onRetry),
+              TfiSecondaryButton(label: 'Retry', onPressed: onRetry!),
             ],
           ],
         ),

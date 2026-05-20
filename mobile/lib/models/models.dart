@@ -249,7 +249,7 @@ class MovieModel {
 }
 
 class WallpaperModel {
-  WallpaperModel({required this.id, this.title, this.category, this.imageUrl, this.isFree = true});
+  const WallpaperModel({required this.id, this.title, this.category, this.imageUrl, this.isFree = true});
   final String id;
   final String? title;
   final String? category;
@@ -266,7 +266,7 @@ class WallpaperModel {
 }
 
 class StatusCardModel {
-  StatusCardModel({required this.id, this.title, this.category, this.imageUrl, this.isFree = true});
+  const StatusCardModel({required this.id, this.title, this.category, this.imageUrl, this.isFree = true});
   final String id;
   final String? title;
   final String? category;
@@ -292,6 +292,9 @@ class PollModel {
     this.endsAt,
     this.userVote,
     this.status,
+    this.heroName,
+    this.movieName,
+    this.imageUrl,
   });
 
   final String id;
@@ -302,9 +305,20 @@ class PollModel {
   final DateTime? endsAt;
   final String? userVote;
   final String? status;
+  final String? heroName;
+  final String? movieName;
+  final String? imageUrl;
+
+  bool get isClosed => status == 'CLOSED' || status == 'ENDED';
+  bool get hasVoted => userVote != null && userVote!.isNotEmpty;
+  bool get isWordPoll => type.contains('WORD');
+  bool get isReactionPoll => type.contains('REACTION');
+  bool get isPrediction => type.contains('PREDICT');
 
   factory PollModel.fromJson(Map<String, dynamic> j) {
     final opts = (j['options'] as List? ?? []).map((e) => PollOption.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    final hero = j['hero'];
+    final movie = j['movie'];
     return PollModel(
       id: j['id'] as String,
       question: j['question'] as String? ?? '',
@@ -314,6 +328,9 @@ class PollModel {
       endsAt: j['ends_at'] != null ? DateTime.tryParse(j['ends_at'] as String) : null,
       userVote: j['user_vote'] as String?,
       status: (j['status'] as String?)?.toUpperCase(),
+      heroName: j['hero_name'] as String? ?? (hero is Map ? hero['name'] as String? : null),
+      movieName: j['movie_name'] as String? ?? (movie is Map ? movie['title'] as String? : null),
+      imageUrl: j['image_url'] as String?,
     );
   }
 }

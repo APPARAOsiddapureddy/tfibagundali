@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-// import 'package:provider/provider.dart';
-// import '../../core/api/api_client.dart';
-// import '../../core/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import '../../core/api/api_client.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-// import '../../core/utils/format_utils.dart';
+import '../../core/utils/format_utils.dart';
 import '../../widgets/poster_wall.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -77,41 +77,25 @@ class _OtpScreenState extends State<OtpScreen> {
       _error = null;
     });
 
-    // Backend bypassed — accept hardcoded OTP 123456
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    if (_code == '123456') {
-      context.go('/onboarding/hero');
-    } else {
-      setState(() {
-        _error = 'Invalid OTP. Use 123456 for testing.';
-        _loading = false;
-      });
+    try {
+      final auth = await context.read<AuthProvider>().verifyOtp(widget.phone, _code);
+      if (!mounted) return;
+      context.go(auth.needsOnboarding ? '/onboarding/hero' : '/home');
+    } on ApiException catch (e) {
+      setState(() => _error = userFacingError(e));
+    } catch (e) {
+      setState(() => _error = userFacingError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-
-    // --- Backend service (commented out for now) ---
-    // try {
-    //   final auth = await context.read<AuthProvider>().verifyOtp(widget.phone, _code);
-    //   if (!mounted) return;
-    //   context.go(auth.needsOnboarding ? '/onboarding/hero' : '/home');
-    // } on ApiException catch (e) {
-    //   setState(() => _error = userFacingError(e));
-    // } catch (e) {
-    //   setState(() => _error = userFacingError(e));
-    // } finally {
-    //   if (mounted) setState(() => _loading = false);
-    // }
   }
 
   Future<void> _resendOtp() async {
     if (_resendSeconds > 0) return;
-    // Backend bypassed — just restart timer
-    _startResendTimer();
-    // --- Backend service (commented out for now) ---
-    // try {
-    //   await context.read<AuthProvider>().sendOtp(widget.phone);
-    //   _startResendTimer();
-    // } catch (_) {}
+    try {
+      await context.read<AuthProvider>().sendOtp(widget.phone);
+      _startResendTimer();
+    } catch (_) {}
   }
 
   @override

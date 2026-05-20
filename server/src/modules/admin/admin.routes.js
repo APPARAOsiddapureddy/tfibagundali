@@ -1,8 +1,10 @@
 const router = require('express').Router();
 const svc = require('./admin.service');
 const { requireAdmin } = require('../../middleware/admin.middleware');
+const uploadsRoutes = require('../uploads/uploads.routes');
 
 router.use(requireAdmin);
+router.use('/uploads', uploadsRoutes);
 
 router.get('/stats', async (req, res, next) => {
   try {

@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../models/models.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../widgets/tfi_cinematic_components.dart';
+import '../../widgets/tfi_poster_placeholder.dart';
 
 class FavouriteHeroScreen extends StatefulWidget {
   const FavouriteHeroScreen({super.key});
@@ -50,42 +51,60 @@ class _FavouriteHeroScreenState extends State<FavouriteHeroScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return TfiScreen(
+    return TfiScaffold(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          TfiDetailAppBar(title: 'Favourite Hero', onBack: () => context.pop()),
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                BackButtonCircle(onTap: () => context.pop()),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Favourite hero', style: TfiTokens.display(22, color: TfiTokens.textHi))),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: TfiTokens.padScreen),
+            child: Text(
+              'Choose a hero to see their updates first on Home.',
+              style: TfiTokens.telugu(13, color: TfiTokens.textMid),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Optional — personalizes My Hero updates on Home', style: TfiTokens.body(13, color: TfiTokens.textMid)),
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: TfiTokens.fire))
+                ? const Center(child: CircularProgressIndicator(color: TfiTokens.gold))
                 : GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12),
+                    padding: const EdgeInsets.all(TfiTokens.padScreen),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.9,
+                    ),
                     itemCount: _heroes.length,
                     itemBuilder: (_, i) {
                       final h = _heroes[i];
                       final on = _selected == h.id;
                       return GestureDetector(
                         onTap: () => setState(() => _selected = h.id),
-                        child: TfiCard(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: on ? TfiTokens.gradGold : null,
+                            color: on ? null : TfiTokens.card1.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(TfiTokens.rCard),
+                            border: Border.all(color: on ? TfiTokens.gold : TfiTokens.line),
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(h.iconEmoji ?? '⭐', style: const TextStyle(fontSize: 36)),
-                              Text(h.name, style: TfiTokens.body(13, color: on ? TfiTokens.fire : TfiTokens.textHi, w: FontWeight.w700)),
+                              TfiPosterPlaceholder(
+                                kind: TfiPlaceholderKind.hero,
+                                title: h.name,
+                                width: 56,
+                                height: 56,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                h.name,
+                                textAlign: TextAlign.center,
+                                style: TfiTokens.body(13, color: on ? const Color(0xFF1A0F00) : TfiTokens.textHi, w: FontWeight.w800),
+                              ),
+                              if (h.teluguName != null)
+                                Text(h.teluguName!, style: TfiTokens.telugu(10, color: on ? const Color(0xFF1A0F00).withValues(alpha: 0.7) : TfiTokens.textLo)),
                             ],
                           ),
                         ),
@@ -94,11 +113,12 @@ class _FavouriteHeroScreenState extends State<FavouriteHeroScreen> {
                   ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(TfiTokens.padScreen),
             child: Column(
               children: [
-                PrimaryButton(label: _saving ? 'Saving...' : 'Save', onPressed: _saving ? null : () => _save()),
-                TextButton(onPressed: _saving ? null : () => _save(clear: true), child: const Text('Clear favourite hero')),
+                TfiPrimaryButton(label: _saving ? 'Saving...' : 'Save', loading: _saving, onPressed: _saving ? null : () => _save()),
+                const SizedBox(height: 10),
+                TfiSecondaryButton(label: 'Clear favourite', onPressed: _saving ? () {} : () => _save(clear: true)),
               ],
             ),
           ),

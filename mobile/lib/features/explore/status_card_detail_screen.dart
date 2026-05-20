@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/utils/format_utils.dart';
+import '../../data/static_explore_content.dart';
 import '../../models/models.dart';
+import '../../widgets/empty_error_state.dart';
+import '../../widgets/tfi_cinematic_components.dart';
 import '../../widgets/tfi_network_image.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../widgets/tfi_poster_placeholder.dart';
 
 class StatusCardDetailScreen extends StatefulWidget {
   const StatusCardDetailScreen({super.key, required this.cardId});
@@ -22,6 +26,8 @@ class _StatusCardDetailScreenState extends State<StatusCardDetailScreen> {
   final _nameCtrl = TextEditingController();
   final _textCtrl = TextEditingController();
   bool _loading = true;
+  bool _saved = false;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -31,6 +37,16 @@ class _StatusCardDetailScreenState extends State<StatusCardDetailScreen> {
   }
 
   Future<void> _load() async {
+    if (StaticExploreContent.isStaticId(widget.cardId)) {
+      StatusCardModel c;
+      try {
+        c = StaticExploreContent.statusCards.firstWhere((x) => x.id == widget.cardId);
+      } catch (_) {
+        c = StaticExploreContent.statusCards.first;
+      }
+      if (mounted) setState(() { _card = c; _loading = false; });
+      return;
+    }
     try {
       final c = await context.read<AuthProvider>().api.getStatusCard(widget.cardId);
       context.read<AuthProvider>().events.track('status_card_viewed', contentType: 'status_card', contentId: widget.cardId, sourceScreen: 'explore');
@@ -68,6 +84,26 @@ class _StatusCardDetailScreenState extends State<StatusCardDetailScreen> {
     }
   }
 
+  Future<void> _save() async {
+    if (StaticExploreContent.isStaticId(widget.cardId)) {
+      setState(() => _saved = true);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      if (_saved) {
+        await context.read<AuthProvider>().api.unsaveStatusCard(widget.cardId);
+      } else {
+        await context.read<AuthProvider>().api.saveStatusCard(widget.cardId);
+      }
+      if (mounted) setState(() => _saved = !_saved);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(userFacingError(e))));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _customize() async {
     try {
       await context.read<AuthProvider>().api.customizeStatusCard(widget.cardId, {
@@ -77,9 +113,7 @@ class _StatusCardDetailScreenState extends State<StatusCardDetailScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customization saved')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Customize: ${userFacingError(e)}')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(userFacingError(e))));
       }
     }
   }
@@ -87,39 +121,113 @@ class _StatusCardDetailScreenState extends State<StatusCardDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const TfiScreen(child: Center(child: CircularProgressIndicator(color: TfiTokens.fire)));
-    }
-    final c = _card;
-    if (c == null) {
-      return TfiScreen(child: Center(child: Text('Not found', style: TfiTokens.body(16, color: TfiTokens.red))));
-    }
-    return TfiScreen(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      return TfiScaffold(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BackButtonCircle(onTap: () => context.pop()),
-            const SizedBox(height: 12),
-            TfiNetworkImage(url: c.imageUrl, height: 280),
-            const SizedBox(height: 12),
-            Text(c.title ?? 'Status card', style: TfiTokens.display(22, color: TfiTokens.textHi)),
-            Text('FREE', style: TfiTokens.body(12, color: TfiTokens.green, w: FontWeight.w800)),
-            const SizedBox(height: 16),
-            TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Your name (optional)')),
-            TextField(controller: _textCtrl, decoration: const InputDecoration(labelText: 'Custom text (optional)'), maxLength: 80),
-            const SizedBox(height: 12),
-            PrimaryButton(label: 'Apply customize', filled: false, onPressed: _customize),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: PrimaryButton(label: 'Download', onPressed: _download)),
-                const SizedBox(width: 8),
-                Expanded(child: PrimaryButton(label: 'Share', filled: false, onPressed: _share)),
-              ],
+            const TfiDetailAppBar(title: 'Status Card'),
+            Expanded(
+              child: Shimmer.fromColors(
+                baseColor: TfiTokens.card1,
+                highlightColor: TfiTokens.card3,
+                child: const Padding(padding: EdgeInsets.all(16), child: TfiShimmerCard(height: 360)),
+              ),
             ),
           ],
         ),
+      );
+    }
+    final c = _card;
+    if (c == null) {
+      return TfiScaffold(
+        child: Column(
+          children: [
+            TfiDetailAppBar(title: 'Status Card', onBack: () => context.pop()),
+            const Expanded(child: ErrorState(message: 'Status card not found')),
+          ],
+        ),
+      );
+    }
+
+    return TfiScaffold(
+      child: Column(
+        children: [
+          TfiDetailAppBar(title: 'Status Card', onBack: () => context.pop()),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 0, TfiTokens.padScreen, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(TfiTokens.rHero),
+                    child: AspectRatio(
+                      aspectRatio: 9 / 16,
+                      child: c.imageUrl != null && c.imageUrl!.isNotEmpty
+                          ? TfiNetworkImage(url: c.imageUrl, fit: BoxFit.cover, placeholderKind: TfiPlaceholderKind.statusCard, placeholderTitle: c.title)
+                          : TfiPosterPlaceholder(kind: TfiPlaceholderKind.statusCard, title: c.title, icon: Icons.chat_bubble_outline_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(c.title ?? 'Status card', style: TfiTokens.display(22, color: TfiTokens.textHi)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      TfiBadge('FREE'),
+                      if (c.category != null) TfiTagChip(label: c.category!),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TfiGlassPanel(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _nameCtrl,
+                          style: TfiTokens.body(14, color: TfiTokens.textHi),
+                          decoration: InputDecoration(
+                            labelText: 'Your name (optional)',
+                            labelStyle: TfiTokens.body(12, color: TfiTokens.textLo),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TfiTokens.line)),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _textCtrl,
+                          maxLength: 80,
+                          style: TfiTokens.body(14, color: TfiTokens.textHi),
+                          decoration: InputDecoration(
+                            labelText: 'Custom text (optional)',
+                            labelStyle: TfiTokens.body(12, color: TfiTokens.textLo),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TfiTokens.line)),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TfiSecondaryButton(label: 'Apply customize', onPressed: _customize),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TfiPrimaryButton(label: 'Download', icon: Icons.download_rounded, onPressed: _download),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: TfiSecondaryButton(label: 'Share', icon: Icons.share_rounded, onPressed: _share)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TfiSecondaryButton(
+                          label: _saved ? 'Saved' : 'Save',
+                          icon: _saved ? Icons.bookmark : Icons.bookmark_outline,
+                          onPressed: _saving ? () {} : _save,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

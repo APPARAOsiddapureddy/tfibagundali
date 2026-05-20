@@ -19,8 +19,9 @@ class TfiTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0B0D14),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+        color: TfiTokens.bg1.withValues(alpha: 0.94),
+        border: Border(top: BorderSide(color: TfiTokens.lineStrong)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, -4))],
       ),
       child: SafeArea(
         top: false,

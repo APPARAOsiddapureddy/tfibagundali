@@ -13,6 +13,10 @@ const schema = z.object({
   OTP_BYPASS_CODE: z.string().optional(),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173'),
   ADMIN_API_KEY: z.string().optional(),
+  PUBLIC_BASE_URL: z.string().default('http://localhost:3001'),
+  UPLOAD_MAX_BYTES: z.coerce.number().default(5 * 1024 * 1024),
+  UPLOAD_DIR: z.string().default('uploads'),
+  REMOTE_IMAGE_TIMEOUT_MS: z.coerce.number().default(15000),
 });
 
 const parsed = schema.safeParse(process.env);

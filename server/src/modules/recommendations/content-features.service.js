@@ -10,8 +10,18 @@ async function syncUpdateFeatures(updateId) {
   );
   if (!rows[0]) return;
   const u = rows[0];
-  const heroIds = u.hero_id ? [u.hero_id] : [];
-  const movieIds = u.movie_id ? [u.movie_id] : [];
+  const [{ rows: heroRows }, { rows: movieRows }] = await Promise.all([
+    db.query('SELECT hero_id FROM update_heroes WHERE update_id = $1', [updateId]),
+    db.query('SELECT movie_id FROM update_movies WHERE update_id = $1', [updateId]),
+  ]);
+  const heroIds = [...new Set([
+    ...(u.hero_id ? [u.hero_id] : []),
+    ...heroRows.map((r) => r.hero_id),
+  ])];
+  const movieIds = [...new Set([
+    ...(u.movie_id ? [u.movie_id] : []),
+    ...movieRows.map((r) => r.movie_id),
+  ])];
   const freshness = computeFreshness(u);
   const trust = computeTrust(u);
   const engagement = computeEngagement(u);

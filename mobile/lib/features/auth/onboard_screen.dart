@@ -11,7 +11,7 @@ class _HeroData {
   const _HeroData({
     required this.key,
     required this.name,
-    required this.army,
+    required this.updatesLabel,
     required this.emoji,
     required this.color,
     required this.gradient,
@@ -20,7 +20,7 @@ class _HeroData {
 
   final String key;
   final String name;
-  final String army;
+  final String updatesLabel;
   final String emoji;
   final Color color;
   final Gradient gradient;
@@ -33,7 +33,7 @@ const _heroes = [
   _HeroData(
     key: 'power',
     name: 'Pawan Kalyan',
-    army: 'Power Army',
+    updatesLabel: 'Pawan Kalyan Updates',
     emoji: '⚡',
     color: Color(0xFF00D4FF),
     gradient: LinearGradient(colors: [Color(0xFF67E8F9), Color(0xFF0EA5E9), Color(0xFF1E40AF)]),
@@ -42,7 +42,7 @@ const _heroes = [
   _HeroData(
     key: 'bunny',
     name: 'Allu Arjun',
-    army: 'Bunny Army',
+    updatesLabel: 'Allu Arjun Updates',
     emoji: '🔥',
     color: Color(0xFFFF4D2D),
     gradient: LinearGradient(colors: [Color(0xFFFFB347), Color(0xFFFF4D2D), Color(0xFF991B1B)]),
@@ -51,7 +51,7 @@ const _heroes = [
   _HeroData(
     key: 'charan',
     name: 'Ram Charan',
-    army: 'Charan Army',
+    updatesLabel: 'Ram Charan Updates',
     emoji: '🐎',
     color: Color(0xFFDC2626),
     gradient: LinearGradient(colors: [Color(0xFFFCA5A5), Color(0xFFDC2626), Color(0xFF7F1D1D)]),
@@ -60,7 +60,7 @@ const _heroes = [
   _HeroData(
     key: 'tiger',
     name: 'Jr NTR',
-    army: 'Tiger Army',
+    updatesLabel: 'NTR Updates',
     emoji: '🐯',
     color: Color(0xFFF97316),
     gradient: LinearGradient(colors: [Color(0xFFFDBA74), Color(0xFFF97316), Color(0xFF7C2D12)]),
@@ -69,7 +69,7 @@ const _heroes = [
   _HeroData(
     key: 'rebel',
     name: 'Prabhas',
-    army: 'Rebel Army',
+    updatesLabel: 'Prabhas Updates',
     emoji: '🦁',
     color: Color(0xFFD97706),
     gradient: LinearGradient(colors: [Color(0xFFFCD34D), Color(0xFFD97706), Color(0xFF78350F)]),
@@ -78,7 +78,7 @@ const _heroes = [
   _HeroData(
     key: 'superstar',
     name: 'Mahesh Babu',
-    army: 'Superstar Army',
+    updatesLabel: 'Mahesh Babu Updates',
     emoji: '⭐',
     color: Color(0xFF22D3EE),
     gradient: LinearGradient(colors: [Color(0xFFA5F3FC), Color(0xFF06B6D4), Color(0xFF155E75)]),
@@ -87,7 +87,7 @@ const _heroes = [
   _HeroData(
     key: 'balayya',
     name: 'Balakrishna',
-    army: 'Balayya Army',
+    updatesLabel: 'Balakrishna Updates',
     emoji: '💥',
     color: Color(0xFFEF4444),
     gradient: LinearGradient(colors: [Color(0xFFFCA5A5), Color(0xFFEF4444), Color(0xFF7F1D1D)]),
@@ -96,7 +96,7 @@ const _heroes = [
   _HeroData(
     key: 'mega',
     name: 'Chiranjeevi',
-    army: 'Mega Army',
+    updatesLabel: 'Chiranjeevi Updates',
     emoji: '👑',
     color: Color(0xFFA855F7),
     gradient: LinearGradient(colors: [Color(0xFFD8B4FE), Color(0xFFA855F7), Color(0xFF581C87)]),
@@ -183,8 +183,8 @@ class _OnboardScreenState extends State<OnboardScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Your favourite hero updates will be shown first. Optional — change anytime.',
-                          style: TfiTokens.body(13, color: TfiTokens.textMid),
+                          'Mee favourite hero updates mundu chupistam.',
+                          style: TfiTokens.telugu(13, color: TfiTokens.textMid),
                         ),
                       ],
                     ),
@@ -351,7 +351,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
                     Text(hero.emoji, style: const TextStyle(fontSize: 13)),
                     const SizedBox(width: 5),
                     Flexible(
-                      child: Text(hero.army, style: TfiTokens.body(11, color: TfiTokens.textMid, w: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                      child: Text(hero.updatesLabel, style: TfiTokens.body(10, color: TfiTokens.textMid, w: FontWeight.w600), overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),

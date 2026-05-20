@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
@@ -28,11 +29,23 @@ const { optionalAuth } = require('./middleware/auth.middleware');
 const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
 app.use(cors({
-  origin: env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()),
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (env.NODE_ENV === 'development' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
+app.use('/uploads', express.static(path.join(process.cwd(), env.UPLOAD_DIR), {
+  dotfiles: 'deny',
+  index: false,
+}));
 app.use(compression());
 if (env.NODE_ENV !== 'test') app.use(morgan('[:date[iso]] :method :url :status :response-time ms'));
 
@@ -40,6 +53,10 @@ app.get('/health', (req, res) => res.json({
   success: true,
   data: { status: 'ok', app: 'TFI Bagundali', version: '2.1.0' },
 }));
+
+app.get('/admin/upload', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin-upload.html'));
+});
 
 app.use('/v1/auth', authRoutes);
 app.use('/v1/home', homeRoutes);

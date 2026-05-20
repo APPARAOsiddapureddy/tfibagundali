@@ -10,7 +10,7 @@ class TfiScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: TfiTokens.screenBg,
+      decoration: const BoxDecoration(gradient: TfiTokens.gradCinematicBg),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(bottom: false, child: child),

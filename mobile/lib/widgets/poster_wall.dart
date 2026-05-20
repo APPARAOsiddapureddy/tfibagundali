@@ -49,12 +49,14 @@ class PosterWall extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: List.generate(3, (ci) {
                     return Expanded(
-                      child: Transform.translate(
-                        offset: Offset(0, _columnOffsets[ci]),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 7),
-                          child: Column(
-                            children: _columns[ci].map((pi) {
+                      child: ClipRect(
+                        child: Transform.translate(
+                          offset: Offset(0, _columnOffsets[ci]),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 7),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: _columns[ci].map((pi) {
                               final colors = _palettes[pi % _palettes.length];
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 14),
@@ -73,6 +75,7 @@ class PosterWall extends StatelessWidget {
                                 ),
                               );
                             }).toList(),
+                            ),
                           ),
                         ),
                       ),

@@ -96,6 +96,7 @@ function formatPoll(p) {
     ends_at: p.ends_at,
     status: (p.status || 'ACTIVE').toUpperCase(),
     trending_score: p.trending_score,
+    image_url: p.image_url,
     user_vote: p.user_vote,
     user_word: p.user_word,
   };

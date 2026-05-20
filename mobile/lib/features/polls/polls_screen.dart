@@ -1,89 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../core/utils/format_utils.dart';
+import '../../models/models.dart';
+import '../../widgets/empty_error_state.dart';
+import '../../widgets/tfi_cinematic_components.dart';
 
-enum PollKind { poll, prediction }
-
-class FanPoll {
-  const FanPoll({
-    required this.id,
-    required this.kind,
-    required this.question,
-    required this.options,
-    required this.votes,
-    this.badge,
-  });
-
-  final String id;
-  final PollKind kind;
-  final String question;
-  final List<String> options;
-  final List<int> votes;
-  final String? badge;
-}
-
-// TODO(backend): Replace this list with GET /v1/polls?status=active.
-// Backend should return poll id, kind, question, options, vote counts,
-// user_vote, close time, and result status for predictions.
-const _mockPolls = [
-  FanPoll(
-    id: 'director-battle',
-    kind: PollKind.poll,
-    badge: 'Director Poll',
-    question: 'Who is the better director right now?',
-    options: ['S. S. Rajamouli', 'Sukumar', 'Trivikram', 'Prashanth Neel'],
-    votes: [428, 386, 294, 331],
-  ),
-  FanPoll(
-    id: 'best-plot',
-    kind: PollKind.poll,
-    badge: 'Story Poll',
-    question: 'Which movie has the best plot?',
-    options: ['Rangasthalam', 'Jersey', 'Eega', 'Agent Sai Srinivasa Athreya'],
-    votes: [365, 412, 328, 241],
-  ),
-  FanPoll(
-    id: 'best-comeback',
-    kind: PollKind.poll,
-    badge: 'Fan Choice',
-    question: 'Which comeback announcement has more hype?',
-    options: [
-      'Mass action film',
-      'Love story',
-      'Political drama',
-      'Pan-India thriller',
-    ],
-    votes: [514, 206, 188, 347],
-  ),
-];
-
-const _mockPredictions = [
-  FanPoll(
-    id: 'movie-result-prediction',
-    kind: PollKind.prediction,
-    badge: 'Prediction',
-    question: 'What will be the result of the next big star movie?',
-    options: ['Blockbuster', 'Hit', 'Flop', 'Utter Flop'],
-    votes: [512, 374, 92, 41],
-  ),
-  FanPoll(
-    id: 'opening-day-prediction',
-    kind: PollKind.prediction,
-    badge: 'Box Office Mood',
-    question: 'How will the opening day talk be?',
-    options: ['Super Positive', 'Mixed', 'Below Average', 'Disaster Talk'],
-    votes: [441, 292, 86, 37],
-  ),
-  FanPoll(
-    id: 'music-prediction',
-    kind: PollKind.prediction,
-    badge: 'Album Prediction',
-    question: 'How will the album perform after release?',
-    options: ['Chartbuster', 'Good', 'Average', 'Forgettable'],
-    votes: [387, 339, 126, 58],
-  ),
-];
+const _pollFilters = ['All', 'Trending', 'My Hero', 'Movies', 'Word Polls', 'Predictions', 'Completed'];
 
 class PollsScreen extends StatefulWidget {
   const PollsScreen({super.key});
@@ -93,592 +19,224 @@ class PollsScreen extends StatefulWidget {
 }
 
 class _PollsScreenState extends State<PollsScreen> {
-  var _tab = PollKind.poll;
-  final Map<String, int> _votes = {};
+  int _filterIndex = 0;
+  List<PollModel> _polls = [];
+  bool _loading = true;
+  String? _error;
 
-  List<FanPoll> get _items =>
-      _tab == PollKind.poll ? _mockPolls : _mockPredictions;
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().events.track('polls_viewed', sourceScreen: 'polls');
+    });
+  }
 
-  void _vote(FanPoll poll, int optionIndex) {
-    // TODO(backend): Submit vote to POST /v1/polls/:id/vote.
-    // Backend should enforce one vote per user and return updated totals.
-    setState(() => _votes[poll.id] = optionIndex);
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final polls = await context.read<AuthProvider>().api.getPolls();
+      if (mounted) setState(() { _polls = polls; _loading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = userFacingError(e);
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  List<PollModel> get _filtered {
+    final filter = _pollFilters[_filterIndex];
+    final favHero = context.read<AuthProvider>().user?.favouriteHero?.name;
+    return _polls.where((p) {
+      switch (filter) {
+        case 'Trending':
+          return (p.totalVotes ?? 0) >= 50;
+        case 'My Hero':
+          return favHero != null && p.heroName != null && p.heroName!.toLowerCase().contains(favHero.toLowerCase().split(' ').first);
+        case 'Movies':
+          return p.movieName != null && p.movieName!.isNotEmpty;
+        case 'Word Polls':
+          return p.isWordPoll;
+        case 'Predictions':
+          return p.isPrediction;
+        case 'Completed':
+          return p.isClosed || p.hasVoted;
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
+  String _typeBadge(PollModel p) {
+    if (p.isWordPoll) return 'Word';
+    if (p.isReactionPoll) return 'Reaction';
+    if (p.isPrediction) return 'Prediction';
+    return 'Poll';
+  }
+
+  String _timeLeft(PollModel p) {
+    if (p.isClosed) return 'Closed';
+    if (p.hasVoted) return 'Voted';
+    final end = p.endsAt;
+    if (end == null) return 'Open';
+    final diff = end.difference(DateTime.now());
+    if (diff.isNegative) return 'Closed';
+    if (diff.inDays > 0) return '${diff.inDays}d left';
+    return '${diff.inHours}h left';
   }
 
   @override
   Widget build(BuildContext context) {
-    return TfiScreen(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Polls',
-                    style: TfiTokens.display(28, color: TfiTokens.fire),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Fan opinion, movie debates, and release predictions',
-                    style: TfiTokens.body(13, color: TfiTokens.textMid),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _PollTabs(
-                selected: _tab,
-                onChanged: (tab) => setState(() => _tab = tab),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
-              child: _FeatureBanner(kind: _tab),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: _DailyHighlight(
-                poll: _items.first,
-                selectedIndex: _votes[_items.first.id],
-              ),
-            ),
-          ),
-          SliverList.builder(
-            itemCount: _items.length,
-            itemBuilder: (context, index) {
-              final poll = _items[index];
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: _PollCard(
-                  poll: poll,
-                  selectedIndex: _votes[poll.id],
-                  onVote: (optionIndex) => _vote(poll, optionIndex),
+    final items = _filtered;
+
+    return TfiScaffold(
+      child: RefreshIndicator(
+        onRefresh: _load,
+        color: TfiTokens.gold,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(TfiTokens.padScreen, 12, TfiTokens.padScreen, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Polls', style: TfiTokens.display(26, color: TfiTokens.gold)),
+                    Text('Fan debates & opinions — free, no betting', style: TfiTokens.telugu(12, color: TfiTokens.textLo)),
+                  ],
                 ),
-              );
-            },
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 12),
+                child: TfiFilterChipRow(
+                  labels: _pollFilters,
+                  selectedIndex: _filterIndex,
+                  onSelected: (i) => setState(() => _filterIndex = i),
+                ),
+              ),
+            ),
+            if (_loading)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(TfiTokens.padScreen),
+                  child: Shimmer.fromColors(
+                    baseColor: TfiTokens.card1,
+                    highlightColor: TfiTokens.card3,
+                    child: Column(children: List.generate(3, (_) => const Padding(padding: EdgeInsets.only(bottom: 12), child: TfiShimmerCard(height: 120)))),
+                  ),
+                ),
+              )
+            else if (_error != null)
+              SliverToBoxAdapter(child: ErrorState(message: _error!, onRetry: _load))
+            else if (items.isEmpty)
+              const SliverToBoxAdapter(
+                child: Padding(padding: EdgeInsets.all(32), child: EmptyState(message: 'No polls in this filter yet', icon: '🗳️')),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) {
+                    final poll = items[i];
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(TfiTokens.padScreen, 0, TfiTokens.padScreen, i == items.length - 1 ? 88 : 12),
+                      child: _PollListCard(
+                        poll: poll,
+                        typeBadge: _typeBadge(poll),
+                        timeLabel: _timeLeft(poll),
+                        onTap: () => context.push('/polls/${poll.id}'),
+                      ),
+                    );
+                  },
+                  childCount: items.length,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _PollTabs extends StatelessWidget {
-  const _PollTabs({required this.selected, required this.onChanged});
-
-  final PollKind selected;
-  final ValueChanged<PollKind> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: TfiTokens.line),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TabButton(
-              label: 'Polls',
-              selected: selected == PollKind.poll,
-              onTap: () => onChanged(PollKind.poll),
-            ),
-          ),
-          Expanded(
-            child: _TabButton(
-              label: 'Predictions',
-              selected: selected == PollKind.prediction,
-              onTap: () => onChanged(PollKind.prediction),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
-    required this.selected,
+class _PollListCard extends StatelessWidget {
+  const _PollListCard({
+    required this.poll,
+    required this.typeBadge,
+    required this.timeLabel,
     required this.onTap,
   });
 
-  final String label;
-  final bool selected;
+  final PollModel poll;
+  final String typeBadge;
+  final String timeLabel;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: selected ? TfiTokens.gradFire : null,
-          color: selected ? null : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Text(
-          label,
-          style: TfiTokens.body(
-            13,
-            color: selected ? Colors.white : TfiTokens.textMid,
-            w: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeatureBanner extends StatelessWidget {
-  const _FeatureBanner({required this.kind});
-
-  final PollKind kind;
-
-  @override
-  Widget build(BuildContext context) {
-    final isPrediction = kind == PollKind.prediction;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: isPrediction ? TfiTokens.gradPurple : TfiTokens.gradMass,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(
-              isPrediction
-                  ? Icons.trending_up_rounded
-                  : Icons.how_to_vote_rounded,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isPrediction ? 'Fan Predictions' : 'Fan Polls',
-                  style: TfiTokens.display(22, color: Colors.white),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isPrediction
-                      ? 'Predict the release mood before everyone else.'
-                      : 'Vote on cinema debates and see what fans think.',
-                  style: TfiTokens.body(
-                    12,
-                    color: Colors.white.withValues(alpha: 0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DailyHighlight extends StatelessWidget {
-  const _DailyHighlight({required this.poll, required this.selectedIndex});
-
-  final FanPoll poll;
-  final int? selectedIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = poll.kind == PollKind.prediction
-        ? TfiTokens.purple
-        : TfiTokens.fire;
-    final label = poll.kind == PollKind.prediction
-        ? 'Featured prediction'
-        : 'Daily fan debate';
-    final status = selectedIndex == null ? 'Open now' : 'Vote recorded';
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              poll.kind == PollKind.prediction
-                  ? Icons.lock_clock_rounded
-                  : Icons.local_fire_department_rounded,
-              color: color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TfiTokens.body(11, color: color, w: FontWeight.w900),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  poll.question,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TfiTokens.body(
-                    13,
-                    color: TfiTokens.textHi,
-                    w: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            status,
-            style: TfiTokens.body(
-              11,
-              color: TfiTokens.textLo,
-              w: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PollCard extends StatelessWidget {
-  const _PollCard({
-    required this.poll,
-    required this.selectedIndex,
-    required this.onVote,
-  });
-
-  final FanPoll poll;
-  final int? selectedIndex;
-  final ValueChanged<int> onVote;
-
-  bool get _voted => selectedIndex != null;
-
-  @override
-  Widget build(BuildContext context) {
-    final total =
-        poll.votes.fold<int>(0, (sum, votes) => sum + votes) + (_voted ? 1 : 0);
-    final color = poll.kind == PollKind.prediction
-        ? TfiTokens.purple
-        : TfiTokens.fire;
-    final positiveVotes = poll.kind == PollKind.prediction
-        ? poll.votes.take(2).fold<int>(0, (sum, votes) => sum + votes) +
-              ((selectedIndex != null && selectedIndex! <= 1) ? 1 : 0)
-        : 0;
-    final moodPercent = total == 0
-        ? 0
-        : ((positiveVotes / total) * 100).round();
+    final voted = poll.hasVoted;
+    final closed = poll.isClosed;
 
     return TfiCard(
-      accent: color,
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              TfiChip(label: poll.badge ?? 'Poll', color: color, active: true),
-              const Spacer(),
-              if (poll.kind == PollKind.prediction) ...[
-                Text(
-                  'Closes in 2d 4h',
-                  style: TfiTokens.body(
-                    11,
-                    color: TfiTokens.gold,
-                    w: FontWeight.w800,
+              TfiBadge(typeBadge),
+              const SizedBox(width: 8),
+              if (poll.isPrediction)
+                Expanded(
+                  child: Text(
+                    'Fan opinion only',
+                    style: TfiTokens.body(10, color: TfiTokens.textLo),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 10),
-              ],
-              Text(
-                '$total votes',
-                style: TfiTokens.body(
-                  11,
-                  color: TfiTokens.textLo,
-                  w: FontWeight.w700,
-                ),
-              ),
+              const Spacer(),
+              TfiCountdownChip(timeLabel),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             poll.question,
-            style: TfiTokens.display(21, color: TfiTokens.textHi, height: 1.12),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TfiTokens.title(16, w: FontWeight.w800),
           ),
-          const SizedBox(height: 14),
-          ...List.generate(poll.options.length, (index) {
-            final votes = poll.votes[index] + (selectedIndex == index ? 1 : 0);
-            final percent = total == 0 ? 0 : ((votes / total) * 100).round();
-            return _PollOption(
-              label: poll.options[index],
-              percent: percent,
-              selected: selectedIndex == index,
-              voted: _voted,
-              color: color,
-              onTap: () => onVote(index),
-            );
-          }),
-          if (poll.kind == PollKind.prediction) ...[
-            const SizedBox(height: 4),
-            _MoodMeter(percent: moodPercent, color: color),
+          if (poll.heroName != null || poll.movieName != null) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              children: [
+                if (poll.heroName != null) TfiTagChip(label: poll.heroName!),
+                if (poll.movieName != null) TfiTagChip(label: poll.movieName!),
+              ],
+            ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MoodMeter extends StatelessWidget {
-  const _MoodMeter({required this.percent, required this.color});
-
-  final int percent;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: TfiTokens.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Fan mood',
-                  style: TfiTokens.body(
-                    12,
-                    color: TfiTokens.textMid,
-                    w: FontWeight.w800,
-                  ),
-                ),
-              ),
-              Text(
-                '$percent% positive',
-                style: TfiTokens.body(
-                  12,
-                  color: TfiTokens.gold,
-                  w: FontWeight.w900,
-                ),
-              ),
+              Text('${poll.totalVotes ?? 0} votes', style: TfiTokens.body(12, color: TfiTokens.textLo)),
+              const Spacer(),
+              if (voted)
+                Text('Voted ✓', style: TfiTokens.body(11, color: TfiTokens.green, w: FontWeight.w800))
+              else if (closed)
+                Text('Closed', style: TfiTokens.body(11, color: TfiTokens.textLo, w: FontWeight.w800))
+              else
+                Text('Vote →', style: TfiTokens.body(11, color: TfiTokens.gold, w: FontWeight.w800)),
             ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: SizedBox(
-              height: 7,
-              child: Stack(
-                children: [
-                  Container(color: Colors.white.withValues(alpha: 0.08)),
-                  FractionallySizedBox(
-                    widthFactor: percent / 100,
-                    child: Container(color: color),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PollOption extends StatelessWidget {
-  const _PollOption({
-    required this.label,
-    required this.percent,
-    required this.selected,
-    required this.voted,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final int percent;
-  final bool selected;
-  final bool voted;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: voted ? null : onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: selected ? color.withValues(alpha: 0.16) : TfiTokens.bg2,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? color.withValues(alpha: 0.65) : TfiTokens.line,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            children: [
-              if (voted)
-                Positioned.fill(
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: percent / 100,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.18),
-                      ),
-                    ),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 13,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              label,
-                              style: TfiTokens.body(
-                                14,
-                                color: TfiTokens.textHi,
-                                w: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          if (selected) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: TfiTokens.gold.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: TfiTokens.gold.withValues(alpha: 0.25),
-                                ),
-                              ),
-                              child: Text(
-                                'Your pick',
-                                style: TfiTokens.body(
-                                  10,
-                                  color: TfiTokens.gold,
-                                  w: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    if (voted)
-                      Text(
-                        '$percent%',
-                        style: TfiTokens.body(
-                          13,
-                          color: selected ? TfiTokens.gold : TfiTokens.textMid,
-                          w: FontWeight.w900,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class PollDetailScreen extends StatelessWidget {
-  const PollDetailScreen({super.key, required this.pollId});
-
-  final String pollId;
-
-  @override
-  Widget build(BuildContext context) {
-    return TfiScreen(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Polls',
-                style: TfiTokens.display(28, color: TfiTokens.fire),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Vote from the Polls tab.',
-                textAlign: TextAlign.center,
-                style: TfiTokens.body(14, color: TfiTokens.textMid),
-              ),
-              const SizedBox(height: 20),
-              PrimaryButton(
-                label: 'Back to Polls',
-                onPressed: () => context.go('/polls'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

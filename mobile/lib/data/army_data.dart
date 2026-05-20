@@ -21,7 +21,7 @@ class ArmyInfo {
   final Gradient gradient;
   final int points;
 
-  String get name => army.replaceAll(' Army', '');
+  String get name => hero;
 }
 
 abstract final class ArmyData {
@@ -32,7 +32,7 @@ abstract final class ArmyData {
       key: 'power',
       hero: 'Pawan Kalyan',
       telugu: 'పవన్ కల్యాణ్',
-      army: 'Power Army',
+      army: 'Pawan Kalyan',
       emoji: '⚡',
       color: Color(0xFF00D4FF),
       gradient: LinearGradient(colors: [Color(0xFF67E8F9), Color(0xFF0EA5E9), Color(0xFF1E40AF)]),
@@ -42,7 +42,7 @@ abstract final class ArmyData {
       key: 'bunny',
       hero: 'Allu Arjun',
       telugu: 'అల్లు అర్జున్',
-      army: 'Bunny Army',
+      army: 'Allu Arjun',
       emoji: '🔥',
       color: Color(0xFFFF4D2D),
       gradient: LinearGradient(colors: [Color(0xFFFFB347), Color(0xFFFF4D2D), Color(0xFF991B1B)]),
@@ -52,7 +52,7 @@ abstract final class ArmyData {
       key: 'charan',
       hero: 'Ram Charan',
       telugu: 'రామ్ చరణ్',
-      army: 'Charan Army',
+      army: 'Ram Charan',
       emoji: '🐎',
       color: Color(0xFFDC2626),
       gradient: LinearGradient(colors: [Color(0xFFFCA5A5), Color(0xFFDC2626), Color(0xFF7F1D1D)]),
@@ -62,7 +62,7 @@ abstract final class ArmyData {
       key: 'tiger',
       hero: 'Jr NTR',
       telugu: 'జూ. ఎన్టీఆర్',
-      army: 'Tiger Army',
+      army: 'Jr NTR',
       emoji: '🐯',
       color: Color(0xFFF97316),
       gradient: LinearGradient(colors: [Color(0xFFFDBA74), Color(0xFFF97316), Color(0xFF7C2D12)]),
@@ -72,7 +72,7 @@ abstract final class ArmyData {
       key: 'rebel',
       hero: 'Prabhas',
       telugu: 'ప్రభాస్',
-      army: 'Rebel Army',
+      army: 'Prabhas',
       emoji: '🦁',
       color: Color(0xFFD97706),
       gradient: LinearGradient(colors: [Color(0xFFFCD34D), Color(0xFFD97706), Color(0xFF78350F)]),
@@ -82,7 +82,7 @@ abstract final class ArmyData {
       key: 'superstar',
       hero: 'Mahesh Babu',
       telugu: 'మహేష్ బాబు',
-      army: 'Superstar Army',
+      army: 'Mahesh Babu',
       emoji: '⭐',
       color: Color(0xFF22D3EE),
       gradient: LinearGradient(colors: [Color(0xFFA5F3FC), Color(0xFF06B6D4), Color(0xFF155E75)]),
@@ -92,7 +92,7 @@ abstract final class ArmyData {
       key: 'balayya',
       hero: 'Balakrishna',
       telugu: 'బాలకృష్ణ',
-      army: 'Balayya Army',
+      army: 'Balakrishna',
       emoji: '💥',
       color: Color(0xFFEF4444),
       gradient: LinearGradient(colors: [Color(0xFFFCA5A5), Color(0xFFEF4444), Color(0xFF7F1D1D)]),
@@ -102,7 +102,7 @@ abstract final class ArmyData {
       key: 'mega',
       hero: 'Chiranjeevi',
       telugu: 'చిరంజీవి',
-      army: 'Mega Army',
+      army: 'Chiranjeevi',
       emoji: '👑',
       color: Color(0xFFA855F7),
       gradient: LinearGradient(colors: [Color(0xFFD8B4FE), Color(0xFFA855F7), Color(0xFF581C87)]),

@@ -3,7 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../widgets/tfi_widgets.dart';
+import '../../widgets/empty_error_state.dart';
+import '../../widgets/tfi_cinematic_components.dart';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -13,7 +14,7 @@ class DownloadsScreen extends StatefulWidget {
 }
 
 class _DownloadsScreenState extends State<DownloadsScreen> {
-  List<dynamic> _items = [];
+  List<Map<String, dynamic>> _items = [];
   bool _loading = true;
 
   @override
@@ -25,7 +26,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   Future<void> _load() async {
     try {
       final items = await context.read<AuthProvider>().api.getDownloads();
-      if (mounted) setState(() { _items = items; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _items = items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -33,44 +39,60 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return TfiScreen(
+    return TfiScaffold(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                BackButtonCircle(onTap: () => context.pop()),
-                const SizedBox(width: 12),
-                Text('Downloads', style: TfiTokens.display(24, color: TfiTokens.textHi)),
-              ],
-            ),
-          ),
+          TfiDetailAppBar(title: 'Downloads', onBack: () => context.pop()),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: TfiTokens.fire))
+                ? const Center(child: CircularProgressIndicator(color: TfiTokens.gold))
                 : _items.isEmpty
-                    ? Center(child: Text('No downloads yet', style: TfiTokens.body(14, color: TfiTokens.textLo)))
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _items.length,
-                        itemBuilder: (_, i) {
-                          final m = Map<String, dynamic>.from(_items[i] as Map);
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: TfiCard(
-                              child: ListTile(
-                                leading: const Icon(Icons.download_done, color: TfiTokens.green),
-                                title: Text(
-                                  m['content_type'] as String? ?? 'Download',
-                                  style: TfiTokens.body(14, color: TfiTokens.textHi),
+                    ? const EmptyState(message: 'No downloads yet', icon: '📥')
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        color: TfiTokens.gold,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(TfiTokens.padScreen),
+                          itemCount: _items.length,
+                          itemBuilder: (_, i) {
+                            final m = _items[i];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: TfiCard(
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                        color: TfiTokens.green.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(Icons.download_done_rounded, color: TfiTokens.green),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            m['title'] as String? ?? m['content_type'] as String? ?? 'Download',
+                                            style: TfiTokens.body(14, color: TfiTokens.textHi, w: FontWeight.w700),
+                                          ),
+                                          Text(
+                                            m['created_at']?.toString() ?? '',
+                                            style: TfiTokens.body(11, color: TfiTokens.textLo),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const TfiBadge('FREE'),
+                                  ],
                                 ),
-                                subtitle: Text(m['created_at']?.toString() ?? '', style: TfiTokens.body(11, color: TfiTokens.textLo)),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
           ),
         ],

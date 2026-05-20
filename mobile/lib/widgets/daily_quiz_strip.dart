@@ -72,7 +72,7 @@ class DailyQuizStrip extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '5 Qs · 15s each · Earn coins',
+                      '5 Qs · 15s each · Daily trivia',
                       style: TfiTokens.body(11, color: TfiTokens.textLo),
                     ),
                   ],

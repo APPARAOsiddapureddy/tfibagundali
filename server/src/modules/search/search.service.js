@@ -2,11 +2,14 @@ const db = require('../../config/db');
 
 async function search(q, limit = 10) {
   if (!q || q.length < 2) {
-    return { updates: [], movies: [], heroes: [], wallpapers: [], status_cards: [], polls: [], quizzes: [] };
+    return {
+      updates: [], movies: [], heroes: [], wallpapers: [], status_cards: [],
+      media_assets: [], polls: [], quizzes: [],
+    };
   }
   const pattern = `%${q}%`;
 
-  const [updates, movies, heroes, wallpapers, cards, polls, quizzes] = await Promise.all([
+  const [updates, movies, heroes, wallpapers, cards, mediaAssets, polls, quizzes] = await Promise.all([
     db.query(
       `SELECT u.id, u.title, u.short_summary, u.summary, u.category, u.trust_status, u.published_at
        FROM tfi_updates u WHERE u.is_active AND (u.title ILIKE $1 OR u.summary ILIKE $1 OR u.short_summary ILIKE $1)
@@ -25,12 +28,20 @@ async function search(q, limit = 10) {
     ),
     db.query(
       `SELECT id, title, category, image_url FROM wallpapers
-       WHERE is_active IS NOT FALSE AND title ILIKE $1 ORDER BY download_count DESC LIMIT $2`,
+       WHERE is_active IS NOT FALSE AND (title ILIKE $1 OR tags::text ILIKE $1)
+       ORDER BY download_count DESC LIMIT $2`,
       [pattern, limit]
     ),
     db.query(
       `SELECT id, title, category, image_url FROM status_cards
-       WHERE is_active IS NOT FALSE AND title ILIKE $1 ORDER BY download_count DESC LIMIT $2`,
+       WHERE is_active IS NOT FALSE AND (title ILIKE $1 OR tags::text ILIKE $1)
+       ORDER BY download_count DESC LIMIT $2`,
+      [pattern, limit]
+    ),
+    db.query(
+      `SELECT id, name, asset_type, category, image_url FROM media_assets
+       WHERE is_active AND is_public AND (name ILIKE $1 OR tags::text ILIKE $1 OR slug ILIKE $1)
+       ORDER BY created_at DESC LIMIT $2`,
       [pattern, limit]
     ),
     db.query(
@@ -51,6 +62,7 @@ async function search(q, limit = 10) {
     heroes: heroes.rows,
     wallpapers: wallpapers.rows,
     status_cards: cards.rows,
+    media_assets: mediaAssets.rows,
     polls: polls.rows,
     quizzes: quizzes.rows,
   };

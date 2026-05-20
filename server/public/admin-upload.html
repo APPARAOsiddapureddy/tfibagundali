@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TFI Bagundali — Admin Upload</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; background: #111; color: #eee; }
+    label { display: block; margin-top: 12px; font-size: 13px; color: #aaa; }
+    input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; background: #222; border: 1px solid #444; color: #fff; border-radius: 4px; }
+    button { margin-top: 16px; padding: 10px 20px; background: #c9a227; color: #111; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    button.secondary { background: #333; color: #eee; margin-left: 8px; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+    #preview { max-width: 100%; margin-top: 16px; border: 1px solid #444; }
+    #result { background: #1a1a1a; padding: 12px; margin-top: 16px; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+    .hidden { display: none; }
+    h1 { font-size: 20px; }
+    .toggle { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .toggle input { width: auto; }
+  </style>
+</head>
+<body>
+  <h1>TFI Bagundali — Media Upload</h1>
+  <p style="color:#888;font-size:13px">Admin CMS for images. Requires <code>x-admin-key</code>.</p>
+
+  <label>Admin API Key</label>
+  <input type="password" id="adminKey" placeholder="From ADMIN_API_KEY in .env" />
+
+  <label>Upload mode</label>
+  <select id="mode">
+    <option value="file">Upload file from computer</option>
+    <option value="url">Image address / URL</option>
+  </select>
+
+  <div id="fileSection">
+    <label>Image file</label>
+    <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp" />
+  </div>
+
+  <div id="urlSection" class="hidden">
+    <label>Image address / URL</label>
+    <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg" />
+    <div class="toggle">
+      <input type="checkbox" id="saveRemoteCopy" checked />
+      <span>Save remote copy to server storage</span>
+    </div>
+  </div>
+
+  <label>Name *</label>
+  <input type="text" id="name" required />
+
+  <label>Description</label>
+  <textarea id="description" rows="2"></textarea>
+
+  <div class="row">
+    <div>
+      <label>Asset type *</label>
+      <select id="assetType">
+        <option value="WALLPAPER">WALLPAPER</option>
+        <option value="TFI_UPDATE">TFI_UPDATE</option>
+        <option value="MOVIE_POSTER">MOVIE_POSTER</option>
+        <option value="HERO_AVATAR">HERO_AVATAR</option>
+        <option value="STATUS_CARD">STATUS_CARD</option>
+        <option value="POLL_IMAGE">POLL_IMAGE</option>
+        <option value="QUIZ_IMAGE">QUIZ_IMAGE</option>
+        <option value="TIMELINE_IMAGE">TIMELINE_IMAGE</option>
+        <option value="NOTIFICATION_IMAGE">NOTIFICATION_IMAGE</option>
+        <option value="GENERAL">GENERAL</option>
+      </select>
+    </div>
+    <div>
+      <label>Category</label>
+      <input type="text" id="category" placeholder="COUNTDOWN, RELEASE_DATE, ..." />
+    </div>
+  </div>
+
+  <label>Usage</label>
+  <select id="usage">
+    <option value="">—</option>
+    <option value="explore_wallpaper">explore_wallpaper</option>
+    <option value="update_card">update_card</option>
+    <option value="movie_poster">movie_poster</option>
+    <option value="hero_avatar">hero_avatar</option>
+    <option value="status_card">status_card</option>
+    <option value="poll_card">poll_card</option>
+    <option value="quiz_question">quiz_question</option>
+    <option value="notification_thumbnail">notification_thumbnail</option>
+    <option value="general">general</option>
+  </select>
+
+  <div class="row">
+    <div>
+      <label>Related hero</label>
+      <select id="heroSelect"><option value="">— Select —</option></select>
+      <input type="text" id="heroIdManual" placeholder="Or paste hero UUID" style="margin-top:4px" />
+    </div>
+    <div>
+      <label>Related movie</label>
+      <select id="movieSelect"><option value="">— Select —</option></select>
+      <input type="text" id="movieIdManual" placeholder="Or paste movie UUID" style="margin-top:4px" />
+    </div>
+  </div>
+
+  <label>Tags (comma-separated)</label>
+  <input type="text" id="tags" placeholder="peddi, ram charan, countdown" />
+
+  <label>Alt text</label>
+  <input type="text" id="altText" />
+
+  <div class="row">
+    <div class="toggle"><input type="checkbox" id="isPublic" checked /><span>Is public</span></div>
+    <div class="toggle"><input type="checkbox" id="isActive" checked /><span>Is active</span></div>
+    <div class="toggle"><input type="checkbox" id="createRecord" /><span>Create record (wallpaper / status card)</span></div>
+  </div>
+
+  <fieldset style="margin-top:16px;border:1px solid #333;padding:12px;border-radius:4px">
+    <legend style="color:#aaa;font-size:12px">Attach to existing entity (optional)</legend>
+    <div class="toggle"><input type="checkbox" id="attachEntity" /><span>Attach after upload</span></div>
+    <label>Entity type</label>
+    <select id="entityType">
+      <option value="">—</option>
+      <option value="TFI_UPDATE">TFI_UPDATE</option>
+      <option value="MOVIE">MOVIE</option>
+      <option value="HERO">HERO</option>
+      <option value="WALLPAPER">WALLPAPER</option>
+      <option value="STATUS_CARD">STATUS_CARD</option>
+      <option value="POLL">POLL</option>
+      <option value="QUIZ_QUESTION">QUIZ_QUESTION</option>
+    </select>
+    <label>Entity ID</label>
+    <input type="text" id="entityId" />
+    <label>Entity field</label>
+    <select id="entityField">
+      <option value="image_url">image_url</option>
+      <option value="poster_url">poster_url</option>
+      <option value="avatar_url">avatar_url</option>
+      <option value="thumbnail_url">thumbnail_url</option>
+      <option value="template_url">template_url</option>
+    </select>
+  </fieldset>
+
+  <button type="button" id="uploadBtn">Upload</button>
+  <button type="button" class="secondary" id="copyUrlBtn" disabled>Copy image_url</button>
+
+  <img id="preview" class="hidden" alt="Preview" />
+  <div id="result"></div>
+
+  <script>
+    const API = window.location.origin;
+    const mode = document.getElementById('mode');
+    const fileSection = document.getElementById('fileSection');
+    const urlSection = document.getElementById('urlSection');
+    let lastImageUrl = '';
+
+    mode.addEventListener('change', () => {
+      const isUrl = mode.value === 'url';
+      fileSection.classList.toggle('hidden', isUrl);
+      urlSection.classList.toggle('hidden', !isUrl);
+    });
+
+    document.getElementById('imageFile').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      const img = document.getElementById('preview');
+      if (f) {
+        img.src = URL.createObjectURL(f);
+        img.classList.remove('hidden');
+      }
+    });
+
+    async function loadDropdowns() {
+      const key = document.getElementById('adminKey').value;
+      if (!key) return;
+      const headers = { 'x-admin-key': key };
+      try {
+        const [heroes, movies] = await Promise.all([
+          fetch(`${API}/v1/admin/heroes`, { headers }).then((r) => r.json()),
+          fetch(`${API}/v1/admin/movies`, { headers }).then((r) => r.json()),
+        ]);
+        const heroSel = document.getElementById('heroSelect');
+        const movieSel = document.getElementById('movieSelect');
+        (heroes.data || []).forEach((h) => {
+          const o = document.createElement('option');
+          o.value = h.id;
+          o.textContent = `${h.name} (${h.id.slice(0, 8)}…)`;
+          heroSel.appendChild(o);
+        });
+        (movies.data || []).forEach((m) => {
+          const o = document.createElement('option');
+          o.value = m.id;
+          o.textContent = `${m.title} (${m.id.slice(0, 8)}…)`;
+          movieSel.appendChild(o);
+        });
+      } catch (e) {
+        console.warn('Could not load heroes/movies', e);
+      }
+    }
+
+    document.getElementById('adminKey').addEventListener('blur', loadDropdowns);
+
+    document.getElementById('copyUrlBtn').addEventListener('click', () => {
+      if (lastImageUrl) navigator.clipboard.writeText(lastImageUrl);
+    });
+
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+      const key = document.getElementById('adminKey').value;
+      if (!key) { alert('Enter admin key'); return; }
+      const name = document.getElementById('name').value.trim();
+      if (!name) { alert('Name required'); return; }
+
+      const heroId = document.getElementById('heroSelect').value || document.getElementById('heroIdManual').value;
+      const movieId = document.getElementById('movieSelect').value || document.getElementById('movieIdManual').value;
+      const resultEl = document.getElementById('result');
+      resultEl.textContent = 'Uploading…';
+
+      try {
+        let res, json;
+        if (mode.value === 'file') {
+          const file = document.getElementById('imageFile').files[0];
+          if (!file) { alert('Select a file'); return; }
+          const fd = new FormData();
+          fd.append('image', file);
+          fd.append('name', name);
+          fd.append('asset_type', document.getElementById('assetType').value);
+          ['description', 'category', 'usage', 'alt_text', 'tags'].forEach((id) => {
+            const v = document.getElementById(id === 'alt_text' ? 'altText' : id)?.value;
+            if (v) fd.append(id, v);
+          });
+          if (heroId) fd.append('related_hero_id', heroId);
+          if (movieId) fd.append('related_movie_id', movieId);
+          fd.append('is_public', document.getElementById('isPublic').checked);
+          fd.append('is_active', document.getElementById('isActive').checked);
+          if (document.getElementById('createRecord').checked) fd.append('create_record', 'true');
+          if (document.getElementById('attachEntity').checked) {
+            fd.append('attach_to_entity', 'true');
+            fd.append('entity_type', document.getElementById('entityType').value);
+            fd.append('entity_id', document.getElementById('entityId').value);
+            fd.append('entity_field', document.getElementById('entityField').value);
+          }
+          res = await fetch(`${API}/v1/admin/uploads/image`, {
+            method: 'POST',
+            headers: { 'x-admin-key': key },
+            body: fd,
+          });
+        } else {
+          const imageUrl = document.getElementById('imageUrl').value.trim();
+          if (!imageUrl) { alert('Enter image URL'); return; }
+          res = await fetch(`${API}/v1/admin/uploads/from-url`, {
+            method: 'POST',
+            headers: { 'x-admin-key': key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name,
+              image_url: imageUrl,
+              asset_type: document.getElementById('assetType').value,
+              description: document.getElementById('description').value || undefined,
+              category: document.getElementById('category').value || undefined,
+              usage: document.getElementById('usage').value || undefined,
+              related_hero_id: heroId || undefined,
+              related_movie_id: movieId || undefined,
+              tags: document.getElementById('tags').value.split(',').map((t) => t.trim()).filter(Boolean),
+              alt_text: document.getElementById('altText').value || undefined,
+              save_remote_copy: document.getElementById('saveRemoteCopy').checked,
+              is_public: document.getElementById('isPublic').checked,
+              is_active: document.getElementById('isActive').checked,
+              create_record: document.getElementById('createRecord').checked,
+              attach_to_entity: document.getElementById('attachEntity').checked,
+              entity_type: document.getElementById('entityType').value || undefined,
+              entity_id: document.getElementById('entityId').value || undefined,
+              entity_field: document.getElementById('entityField').value || undefined,
+            }),
+          });
+        }
+        json = await res.json();
+        resultEl.textContent = JSON.stringify(json, null, 2);
+        if (json.success && json.data?.image_url) {
+          lastImageUrl = json.data.image_url;
+          document.getElementById('copyUrlBtn').disabled = false;
+          const prev = document.getElementById('preview');
+          prev.src = json.data.image_url;
+          prev.classList.remove('hidden');
+        }
+      } catch (e) {
+        resultEl.textContent = String(e);
+      }
+    });
+  </script>
+</body>
+</html>

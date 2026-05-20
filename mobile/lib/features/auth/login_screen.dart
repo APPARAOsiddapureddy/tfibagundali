@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-// import 'package:provider/provider.dart';
-// import '../../core/api/api_client.dart';
-// import '../../core/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import '../../core/api/api_client.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
-// import '../../core/utils/format_utils.dart';
+import '../../core/utils/format_utils.dart';
 import '../../widgets/poster_wall.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -49,24 +49,16 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
 
-    // Backend bypassed — navigate directly to OTP page
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (mounted) {
-      setState(() => _loading = false);
-      context.push('/otp', extra: phone);
+    try {
+      await context.read<AuthProvider>().sendOtp(phone);
+      if (mounted) context.push('/otp', extra: phone);
+    } on ApiException catch (e) {
+      setState(() => _error = userFacingError(e));
+    } catch (e) {
+      setState(() => _error = userFacingError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-
-    // --- Backend service (commented out for now) ---
-    // try {
-    //   await context.read<AuthProvider>().sendOtp(phone);
-    //   if (mounted) context.push('/otp', extra: phone);
-    // } on ApiException catch (e) {
-    //   setState(() => _error = userFacingError(e));
-    // } catch (e) {
-    //   setState(() => _error = userFacingError(e));
-    // } finally {
-    //   if (mounted) setState(() => _loading = false);
-    // }
   }
 
   @override
@@ -105,8 +97,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Text('TFI Bagundali', style: TfiTokens.display(14, color: Colors.white)),
-                        const Spacer(),
+                        Expanded(
+                          child: Text(
+                            'TFI Bagundali',
+                            style: TfiTokens.display(14, color: Colors.white),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         // FREE FOREVER badge
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

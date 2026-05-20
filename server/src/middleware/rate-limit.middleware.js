@@ -24,4 +24,12 @@ const writeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { otpSendLimiter, otpVerifyLimiter, writeLimiter };
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: 'Too many uploads', statusCode: 429 } },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { otpSendLimiter, otpVerifyLimiter, writeLimiter, uploadLimiter };
