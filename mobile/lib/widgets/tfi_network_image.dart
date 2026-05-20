@@ -30,8 +30,8 @@ class TfiNetworkImage extends StatelessWidget {
         height: height,
         width: width,
         fit: fit,
-        placeholder: (_, __) => _placeholder(showSpinner: true),
-        errorWidget: (_, __, ___) => _placeholder(),
+        placeholder: (_, _) => _placeholder(showSpinner: true),
+        errorWidget: (_, _, _) => _placeholder(),
       );
     }
     return ClipRRect(borderRadius: radius, child: child);

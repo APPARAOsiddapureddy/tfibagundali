@@ -1,4 +1,5 @@
 /// TFI Bagundali API models
+library;
 
 class UserModel {
   UserModel({

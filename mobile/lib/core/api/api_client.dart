@@ -96,7 +96,7 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
   }) async {
-    final uri = Uri.parse('${apiBaseUrl}$path');
+    final uri = Uri.parse('$apiBaseUrl$path');
     final headers = <String, String>{'Content-Type': 'application/json'};
     if (_accessToken != null) {
       headers['Authorization'] = 'Bearer $_accessToken';

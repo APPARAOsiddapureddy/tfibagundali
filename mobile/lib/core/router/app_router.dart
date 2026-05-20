@@ -3,10 +3,13 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/onboard_screen.dart';
 import '../../features/auth/otp_screen.dart';
+import '../../features/auth/profile_form_screen.dart';
 import '../../features/explore/explore_screen.dart';
 import '../../features/explore/status_card_detail_screen.dart';
 import '../../features/explore/wallpaper_detail_screen.dart';
 import '../../features/heroes/hero_detail_screen.dart';
+import '../../features/messages/messages_screen.dart';
+import '../../features/notifications/notifications_tab_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/movies/movie_detail_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
@@ -38,22 +41,38 @@ GoRouter createRouter(AuthProvider auth) {
     refreshListenable: auth,
     redirect: (context, state) {
       final loc = state.matchedLocation;
-      if (auth.booting) return loc == '/splash' ? null : '/splash';
-      if (loc == '/splash') return auth.isLoggedIn ? '/home' : '/login';
-      final public = {'/login', '/otp', '/onboard', '/onboarding/hero'};
-      if (!auth.isLoggedIn && !public.contains(loc)) return '/login';
-      if (auth.isLoggedIn && (loc == '/login' || loc == '/otp')) return '/home';
+      // Backend bypassed — no auth-based redirects for now
+      // All routes are public for frontend testing
+      if (loc == '/splash') return '/login'; // skip splash, go straight to login
       return null;
+
+      // --- Backend auth redirects (commented out for now) ---
+      // if (auth.booting) return loc == '/splash' ? null : '/splash';
+      // if (loc == '/splash') return auth.isLoggedIn ? '/home' : '/login';
+      // final public = {'/login', '/otp', '/onboard', '/onboarding/hero'};
+      // if (!auth.isLoggedIn && !public.contains(loc)) return '/login';
+      // if (auth.isLoggedIn && (loc == '/login' || loc == '/otp')) return '/home';
+      // return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: '/otp',
         builder: (_, state) => OtpScreen(phone: state.extra as String? ?? '+91'),
       ),
-      GoRoute(path: '/onboard', builder: (_, __) => const OnboardScreen()),
-      GoRoute(path: '/onboarding/hero', builder: (_, __) => const OnboardScreen()),
+      GoRoute(path: '/onboard', builder: (_, _) => const OnboardScreen()),
+      GoRoute(path: '/onboarding/hero', builder: (_, _) => const OnboardScreen()),
+      GoRoute(
+        path: '/onboarding/profile',
+        builder: (_, state) {
+          final data = state.extra as Map<String, dynamic>? ?? {};
+          return ProfileFormScreen(
+            heroKey: data['heroKey'] as String?,
+            heroName: data['heroName'] as String?,
+          );
+        },
+      ),
       GoRoute(
         path: '/updates',
         builder: (_, state) => UpdatesFeedScreen(
@@ -64,7 +83,7 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(
         path: '/search',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const SearchScreen(),
+        builder: (_, _) => const SearchScreen(),
       ),
       GoRoute(
         path: '/updates/:id',
@@ -99,47 +118,47 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(
         path: '/settings',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const SettingsScreen(),
+        builder: (_, _) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/profile/notification-preferences',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const NotificationPrefsScreen(),
+        builder: (_, _) => const NotificationPrefsScreen(),
       ),
       GoRoute(
         path: '/settings/notifications',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const NotificationPrefsScreen(),
+        builder: (_, _) => const NotificationPrefsScreen(),
       ),
       GoRoute(
         path: '/profile/downloads',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const DownloadsScreen(),
+        builder: (_, _) => const DownloadsScreen(),
       ),
       GoRoute(
         path: '/profile/saved',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const SavedScreen(),
+        builder: (_, _) => const SavedScreen(),
       ),
       GoRoute(
         path: '/profile/reminders',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const RemindersScreen(),
+        builder: (_, _) => const RemindersScreen(),
       ),
       GoRoute(
         path: '/profile/notifications',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const NotificationsScreen(),
+        builder: (_, _) => const NotificationsScreen(),
       ),
       GoRoute(
         path: '/profile/favourite-hero',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const FavouriteHeroScreen(),
+        builder: (_, _) => const FavouriteHeroScreen(),
       ),
       GoRoute(
         path: '/profile/quiz-history',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const QuizHistoryScreen(),
+        builder: (_, _) => const QuizHistoryScreen(),
       ),
       GoRoute(
         path: '/quiz/play',
@@ -152,13 +171,16 @@ GoRouter createRouter(AuthProvider auth) {
         builder: (_, state) => QuizResultScreen(result: state.extra as Map<String, dynamic>?),
       ),
       StatefulShellRoute.indexedStack(
-        builder: (_, __, shell) => MainShell(navigationShell: shell),
+        builder: (_, _, shell) => MainShell(navigationShell: shell),
         branches: [
-          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, __) => const HomeScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/quiz', builder: (_, __) => const QuizScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/explore', builder: (_, __) => const ExploreScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/polls', builder: (_, __) => const PollsScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, state) {
+            final data = state.extra as Map<String, dynamic>?;
+            return HomeScreen(userName: data?['userName'] as String?);
+          })]),
+          StatefulShellBranch(routes: [GoRoute(path: '/quiz', builder: (_, _) => const QuizScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/explore', builder: (_, _) => const ExploreScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/polls', builder: (_, _) => const PollsScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen())]),
         ],
       ),
     ],

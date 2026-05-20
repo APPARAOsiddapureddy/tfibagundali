@@ -73,6 +73,17 @@ abstract final class TfiTokens {
     colors: [Color(0xFFC084FC), Color(0xFF8B5CF6), Color(0xFF6D28D9)],
   );
 
+  // Ticket / auth tokens
+  static const ticketBg = Color(0xFFFFF5E0);
+  static const ticketBgEnd = Color(0xFFFFE5B8);
+  static const ticketDark = Color(0xFF1A0F00);
+  static const ticketAccent = Color(0xFFB43A12);
+  static const goldGlow = Color(0xFFF5A524);
+  static const goldWarm = Color(0xFFFFD7A0);
+
+  static TextStyle mono(double size, {Color? color, FontWeight w = FontWeight.w700}) =>
+      GoogleFonts.jetBrainsMono(fontSize: size, fontWeight: w, color: color ?? textHi);
+
   static const screenBg = BoxDecoration(
     gradient: RadialGradient(
       center: Alignment(0, -0.3),

@@ -65,41 +65,52 @@ class TfiTopBar extends StatelessWidget {
 
     final a = ArmyData.get(armyKey);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(
         children: [
-          HeroAvatar(armyKey: armyKey, size: 40),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hi 👋', style: TfiTokens.body(11, color: TfiTokens.textLo, w: FontWeight.w600)),
-                Row(
-                  children: [
-                    Text(user, style: TfiTokens.body(15, color: TfiTokens.textHi, w: FontWeight.w800)),
-                    const SizedBox(width: 6),
-                    Text(a.emoji, style: const TextStyle(fontSize: 13)),
-                  ],
-                ),
-              ],
+          // ── Profile avatar (simple, no emoji badge) ──
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: a.gradient,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              user.isNotEmpty ? user[0].toUpperCase() : 'F',
+              style: TfiTokens.display(14, color: Colors.white),
             ),
           ),
-          CoinChip(value: coins),
-          const SizedBox(width: 8),
+
+          // ── Center: App name ──
+          Expanded(
+            child: Center(
+              child: Text(
+                'TFI Bagundali',
+                style: TfiTokens.display(17, color: TfiTokens.textHi),
+              ),
+            ),
+          ),
+
+          // ── Right: Notification bell ──
           Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: TfiTokens.line),
                 ),
                 alignment: Alignment.center,
-                child: const Text('🔔', style: TextStyle(fontSize: 16)),
+                child: Icon(
+                  Icons.notifications_outlined,
+                  size: 19,
+                  color: TfiTokens.textMid,
+                ),
               ),
               if (notifs > 0)
                 Positioned(

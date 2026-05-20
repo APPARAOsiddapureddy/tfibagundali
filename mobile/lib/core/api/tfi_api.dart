@@ -188,9 +188,9 @@ class TfiApi {
 
   Future<Map<String, dynamic>> votePoll(String id, {String? optionId, String? wordText, String? reaction}) async =>
       Map<String, dynamic>.from(await _client.post('/polls/$id/vote', {
-        if (optionId != null) 'option_id': optionId,
-        if (wordText != null) 'word_text': wordText,
-        if (reaction != null) 'reaction': reaction,
+        'option_id': ?optionId,
+        'word_text': ?wordText,
+        'reaction': ?reaction,
       }) as Map);
 
   // —— Explore ——
