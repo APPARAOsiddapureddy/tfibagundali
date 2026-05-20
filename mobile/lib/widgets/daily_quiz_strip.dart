@@ -2,22 +2,19 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_tokens.dart';
 
 /// Compact strip reminding users to complete today's daily quiz.
-///
-/// Styled to match the dark cinema theme of the app — uses the
-/// fire/gold gradient accent with a subtle dark glass effect.
 class DailyQuizStrip extends StatelessWidget {
   const DailyQuizStrip({super.key, required this.onTap});
+
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Hide this widget if the user has already completed today's quiz.
-    // Use a provider or API check to determine quiz completion status.
-    // Example: if (quizCompletedToday) return const SizedBox.shrink();
-
+    // TODO(backend): Hide this widget if the user has already completed today's quiz.
+    // The API should expose today's quiz status for the signed-in user.
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -25,10 +22,7 @@ class DailyQuizStrip extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: [
-                Color(0xFF1A1428), // subtle warm dark purple
-                Color(0xFF14172A), // matches TfiCard bg
-              ],
+              colors: [Color(0xFF1A1428), Color(0xFF14172A)],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: TfiTokens.fire.withValues(alpha: 0.25)),
@@ -42,7 +36,6 @@ class DailyQuizStrip extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Icon container with fire gradient
               Container(
                 width: 34,
                 height: 34,
@@ -65,26 +58,26 @@ class DailyQuizStrip extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Text
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Complete today\'s quiz',
-                      style: TfiTokens.body(13.5, color: TfiTokens.textHi, w: FontWeight.w700),
+                      style: TfiTokens.body(
+                        13.5,
+                        color: TfiTokens.textHi,
+                        w: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '10 Qs · 15s each · Earn coins',
+                      '5 Qs · 15s each · Earn coins',
                       style: TfiTokens.body(11, color: TfiTokens.textLo),
                     ),
                   ],
                 ),
               ),
-
-              // Chevron with accent glow
               Container(
                 width: 28,
                 height: 28,

@@ -52,8 +52,19 @@ class TfiTopBar extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title!, style: TfiTokens.display(28, color: TfiTokens.fire)),
-                  if (subtitle != null) Text(subtitle!, style: TfiTokens.body(12, color: TfiTokens.textLo, w: FontWeight.w700)),
+                  Text(
+                    title!,
+                    style: TfiTokens.display(28, color: TfiTokens.fire),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: TfiTokens.body(
+                        12,
+                        color: TfiTokens.textLo,
+                        w: FontWeight.w700,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -118,14 +129,24 @@ class TfiTopBar extends StatelessWidget {
                   right: -3,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: TfiTokens.fireDeep,
                       borderRadius: BorderRadius.circular(9),
                       border: Border.all(color: TfiTokens.bg1, width: 2),
                     ),
                     alignment: Alignment.center,
-                    child: Text('$notifs', style: TfiTokens.body(10, color: Colors.white, w: FontWeight.w800)),
+                    child: Text(
+                      '$notifs',
+                      style: TfiTokens.body(
+                        10,
+                        color: Colors.white,
+                        w: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -137,7 +158,13 @@ class TfiTopBar extends StatelessWidget {
 }
 
 class HeroAvatar extends StatelessWidget {
-  const HeroAvatar({super.key, required this.armyKey, this.size = 56, this.ring = true, this.glow = false});
+  const HeroAvatar({
+    super.key,
+    required this.armyKey,
+    this.size = 56,
+    this.ring = true,
+    this.glow = false,
+  });
   final String armyKey;
   final double size;
   final bool ring;
@@ -154,13 +181,22 @@ class HeroAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: a.gradient,
         boxShadow: [
-          if (ring) BoxShadow(color: a.color.withValues(alpha: 0.5), blurRadius: glow ? 18 : 0),
+          if (ring)
+            BoxShadow(
+              color: a.color.withValues(alpha: 0.5),
+              blurRadius: glow ? 18 : 0,
+            ),
           BoxShadow(color: TfiTokens.bg1, spreadRadius: ring ? 2 : 0),
         ],
       ),
       child: Stack(
         children: [
-          Center(child: Text(ini, style: TfiTokens.display(size * 0.36, color: Colors.white))),
+          Center(
+            child: Text(
+              ini,
+              style: TfiTokens.display(size * 0.36, color: Colors.white),
+            ),
+          ),
           Positioned(
             right: -2,
             bottom: -2,
@@ -191,16 +227,25 @@ class CoinChip extends StatelessWidget {
   String get _display {
     if (value != null) return value!;
     final n = coins ?? 0;
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}k';
+    if (n >= 1000)
+      return '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}k';
     return '$n';
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: large ? 12 : 9, vertical: large ? 6 : 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: large ? 12 : 9,
+        vertical: large ? 6 : 4,
+      ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [TfiTokens.coin.withValues(alpha: 0.15), TfiTokens.gold.withValues(alpha: 0.08)]),
+        gradient: LinearGradient(
+          colors: [
+            TfiTokens.coin.withValues(alpha: 0.15),
+            TfiTokens.gold.withValues(alpha: 0.08),
+          ],
+        ),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: TfiTokens.coin.withValues(alpha: 0.3)),
       ),
@@ -209,7 +254,14 @@ class CoinChip extends StatelessWidget {
         children: [
           const Text('🪙', style: TextStyle(fontSize: 12)),
           const SizedBox(width: 4),
-          Text(_display, style: TfiTokens.body(large ? 14 : 12, color: TfiTokens.coin, w: FontWeight.w800)),
+          Text(
+            _display,
+            style: TfiTokens.body(
+              large ? 14 : 12,
+              color: TfiTokens.coin,
+              w: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -227,7 +279,12 @@ class ArmyPtsChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [TfiTokens.cyan.withValues(alpha: 0.18), TfiTokens.purple.withValues(alpha: 0.1)]),
+        gradient: LinearGradient(
+          colors: [
+            TfiTokens.cyan.withValues(alpha: 0.18),
+            TfiTokens.purple.withValues(alpha: 0.1),
+          ],
+        ),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: TfiTokens.cyan.withValues(alpha: 0.35)),
       ),
@@ -236,7 +293,14 @@ class ArmyPtsChip extends StatelessWidget {
         children: [
           const Text('⚡', style: TextStyle(fontSize: 11)),
           const SizedBox(width: 4),
-          Text('$v pts', style: TfiTokens.body(12, color: TfiTokens.cyan, w: FontWeight.w800)),
+          Text(
+            '$v pts',
+            style: TfiTokens.body(
+              12,
+              color: TfiTokens.cyan,
+              w: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -244,7 +308,13 @@ class ArmyPtsChip extends StatelessWidget {
 }
 
 class TfiChip extends StatelessWidget {
-  const TfiChip({super.key, required this.label, this.active = false, this.color, this.icon});
+  const TfiChip({
+    super.key,
+    required this.label,
+    this.active = false,
+    this.color,
+    this.icon,
+  });
   final String label;
   final bool active;
   final Color? color;
@@ -256,15 +326,29 @@ class TfiChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: active ? c.withValues(alpha: 0.13) : Colors.white.withValues(alpha: 0.05),
+        color: active
+            ? c.withValues(alpha: 0.13)
+            : Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: active ? c.withValues(alpha: 0.33) : TfiTokens.line),
+        border: Border.all(
+          color: active ? c.withValues(alpha: 0.33) : TfiTokens.line,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[Text(icon!, style: const TextStyle(fontSize: 12)), const SizedBox(width: 4)],
-          Text(label, style: TfiTokens.body(11.5, color: active ? c : TfiTokens.textMid, w: FontWeight.w700)),
+          if (icon != null) ...[
+            Text(icon!, style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TfiTokens.body(
+              11.5,
+              color: active ? c : TfiTokens.textMid,
+              w: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -272,7 +356,13 @@ class TfiChip extends StatelessWidget {
 }
 
 class SectionTitle extends StatelessWidget {
-  const SectionTitle({super.key, required this.title, this.telugu, this.action, this.onAction});
+  const SectionTitle({
+    super.key,
+    required this.title,
+    this.telugu,
+    this.action,
+    this.onAction,
+  });
   final String title;
   final String? telugu;
   final String? action;
@@ -289,15 +379,31 @@ class SectionTitle extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title.toUpperCase(), style: TfiTokens.display(22, color: TfiTokens.fire)),
-                if (telugu != null) ...[const SizedBox(height: 3), Text(telugu!, style: TfiTokens.telugu(11, color: TfiTokens.textLo))],
+                Text(
+                  title.toUpperCase(),
+                  style: TfiTokens.display(22, color: TfiTokens.fire),
+                ),
+                if (telugu != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    telugu!,
+                    style: TfiTokens.telugu(11, color: TfiTokens.textLo),
+                  ),
+                ],
               ],
             ),
           ),
           if (action != null)
             GestureDetector(
               onTap: onAction,
-              child: Text('$action →', style: TfiTokens.body(12, color: TfiTokens.fire, w: FontWeight.w700)),
+              child: Text(
+                '$action →',
+                style: TfiTokens.body(
+                  12,
+                  color: TfiTokens.fire,
+                  w: FontWeight.w700,
+                ),
+              ),
             ),
         ],
       ),
@@ -337,22 +443,34 @@ class PrimaryButton extends StatelessWidget {
           color: filled ? null : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(14),
           border: filled ? null : Border.all(color: TfiTokens.lineStrong),
-          boxShadow: filled ? [BoxShadow(color: TfiTokens.fire.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 6))] : null,
+          boxShadow: filled
+              ? [
+                  BoxShadow(
+                    color: TfiTokens.fire.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[Text(icon!), const SizedBox(width: 8)],
-                  Text(label, style: TfiTokens.body(15, color: filled ? Colors.white : TfiTokens.textHi, w: FontWeight.w800)),
-                ],
-              ),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[Text(icon!), const SizedBox(width: 8)],
+                Text(
+                  label,
+                  style: TfiTokens.body(
+                    15,
+                    color: filled ? Colors.white : TfiTokens.textHi,
+                    w: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -364,7 +482,13 @@ class PrimaryButton extends StatelessWidget {
 enum _BtnKind { fire, gold, purple }
 
 class TfiCard extends StatelessWidget {
-  const TfiCard({super.key, required this.child, this.padding, this.accent, this.noPad = false});
+  const TfiCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.accent,
+    this.noPad = false,
+  });
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final Color? accent;
@@ -374,10 +498,22 @@ class TfiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF14172A), Color(0xFF0F1220)]),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF14172A), Color(0xFF0F1220)],
+        ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent?.withValues(alpha: 0.4) ?? TfiTokens.line),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 8))],
+        border: Border.all(
+          color: accent?.withValues(alpha: 0.4) ?? TfiTokens.line,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       padding: noPad ? null : (padding ?? const EdgeInsets.all(14)),
       child: child,
@@ -386,7 +522,13 @@ class TfiCard extends StatelessWidget {
 }
 
 class TfiProgressBar extends StatelessWidget {
-  const TfiProgressBar({super.key, required this.value, this.max = 1, this.color, this.height = 6});
+  const TfiProgressBar({
+    super.key,
+    required this.value,
+    this.max = 1,
+    this.color,
+    this.height = 6,
+  });
   final double value;
   final double max;
   final Color? color;
@@ -405,7 +547,12 @@ class TfiProgressBar extends StatelessWidget {
             Container(color: Colors.white.withValues(alpha: 0.07)),
             FractionallySizedBox(
               widthFactor: pct,
-              child: Container(decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(999))),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: c,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
             ),
           ],
         ),
@@ -423,19 +570,38 @@ class TrustBadge extends StatelessWidget {
     final (label, fg, bg) = switch (status) {
       'official' => ('Official', const Color(0xFF6FE3A0), Color(0x2930C76C)),
       'verified' => ('Verified', const Color(0xFF7DB1FF), Color(0x293E8BFF)),
-      'media_report' => ('Media Report', const Color(0xFFF5C26E), Color(0x29F5A524)),
+      'media_report' => (
+        'Media Report',
+        const Color(0xFFF5C26E),
+        Color(0x29F5A524),
+      ),
       _ => ('Buzz', const Color(0xFFFF7AAC), Color(0x29E93D82)),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-      child: Text(label.toUpperCase(), style: TfiTokens.body(9.5, color: fg, w: FontWeight.w700)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TfiTokens.body(9.5, color: fg, w: FontWeight.w700),
+      ),
     );
   }
 }
 
 class PosterTile extends StatelessWidget {
-  const PosterTile({super.key, this.title, this.telugu, this.tag, this.emoji, this.width = 140, this.height = 185, this.size});
+  const PosterTile({
+    super.key,
+    this.title,
+    this.telugu,
+    this.tag,
+    this.emoji,
+    this.width = 140,
+    this.height = 185,
+    this.size,
+  });
   final String? title;
   final String? telugu;
   final String? tag;
@@ -463,17 +629,35 @@ class PosterTile extends StatelessWidget {
     final t = title ?? '';
     final hash = t.codeUnits.fold(0, (a, b) => a + b);
     final colors = [
-      [const Color(0xFFFF7A1A), const Color(0xFFE63950), const Color(0xFF1B1530)],
-      [const Color(0xFF8B5CF6), const Color(0xFF2563EB), const Color(0xFF0B0E1A)],
-      [const Color(0xFFF59E0B), const Color(0xFFDC2626), const Color(0xFF1B1530)],
+      [
+        const Color(0xFFFF7A1A),
+        const Color(0xFFE63950),
+        const Color(0xFF1B1530),
+      ],
+      [
+        const Color(0xFF8B5CF6),
+        const Color(0xFF2563EB),
+        const Color(0xFF0B0E1A),
+      ],
+      [
+        const Color(0xFFF59E0B),
+        const Color(0xFFDC2626),
+        const Color(0xFF1B1530),
+      ],
     ][hash % 3];
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 12)],
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 12),
+        ],
       ),
       child: Stack(
         children: [
@@ -483,8 +667,18 @@ class PosterTile extends StatelessWidget {
               left: 6,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(6)),
-                child: Text(tag!, style: TfiTokens.body(9, color: Colors.white, w: FontWeight.w800)),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  tag!,
+                  style: TfiTokens.body(
+                    9,
+                    color: Colors.white,
+                    w: FontWeight.w800,
+                  ),
+                ),
               ),
             ),
           Positioned(
@@ -494,8 +688,17 @@ class PosterTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t, maxLines: 2, overflow: TextOverflow.ellipsis, style: TfiTokens.display(11, color: Colors.white)),
-                if (telugu != null) Text(telugu!, style: TfiTokens.telugu(9, color: Colors.white70)),
+                Text(
+                  t,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TfiTokens.display(11, color: Colors.white),
+                ),
+                if (telugu != null)
+                  Text(
+                    telugu!,
+                    style: TfiTokens.telugu(9, color: Colors.white70),
+                  ),
               ],
             ),
           ),

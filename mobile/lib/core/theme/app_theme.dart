@@ -13,6 +13,9 @@ abstract final class AppTheme {
         secondary: TfiTokens.fire,
         surface: TfiTokens.bg2,
       ),
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: TfiTokens.textHi,
