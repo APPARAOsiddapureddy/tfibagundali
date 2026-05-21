@@ -22,8 +22,8 @@ async function search(q, limit = 10) {
       [pattern, limit]
     ),
     db.query(
-      `SELECT id, name, telugu_name, icon_emoji FROM heroes
-       WHERE name ILIKE $1 OR telugu_name ILIKE $1 ORDER BY sort_order LIMIT $2`,
+      `SELECT id, name, telugu_name, icon_emoji, avatar_url FROM heroes
+       WHERE name ILIKE $1 OR telugu_name ILIKE $1 OR aliases::text ILIKE $1 ORDER BY sort_order LIMIT $2`,
       [pattern, limit]
     ),
     db.query(
@@ -72,7 +72,7 @@ async function trendingSearches() {
   return {
     trending: [
       'Peddi', 'Devara 2', 'Pushpa 3', 'Ram Charan', 'Trailer updates', 'OTT releases',
-      'Allu Arjun', 'Prabhas', 'Jr NTR', 'Mahesh Babu',
+      'Allu Arjun', 'Prabhas', 'Jr NTR', 'Mahesh Babu', 'Nani', 'Vijay Deverakonda',
     ],
   };
 }

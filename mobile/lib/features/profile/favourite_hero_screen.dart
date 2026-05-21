@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_tokens.dart';
+import '../../data/hero_catalog.dart';
 import '../../models/models.dart';
 import '../../widgets/tfi_cinematic_components.dart';
+import '../../widgets/tfi_network_image.dart';
 import '../../widgets/tfi_poster_placeholder.dart';
 
 class FavouriteHeroScreen extends StatefulWidget {
@@ -30,10 +32,20 @@ class _FavouriteHeroScreenState extends State<FavouriteHeroScreen> {
   Future<void> _load() async {
     try {
       final heroes = await context.read<AuthProvider>().api.getHeroes();
-      if (mounted) setState(() { _heroes = heroes; _loading = false; });
+      if (mounted) setState(() { _heroes = _dedupeHeroes(heroes); _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<HeroModel> _dedupeHeroes(List<HeroModel> heroes) {
+    final seen = <String>{};
+    final unique = <HeroModel>[];
+    for (final hero in heroes) {
+      final key = HeroCatalog.findByName(hero.name)?.key ?? HeroCatalog.normalizeName(hero.name);
+      if (seen.add(key)) unique.add(hero);
+    }
+    return unique;
   }
 
   Future<void> _save({bool clear = false}) async {
@@ -77,6 +89,8 @@ class _FavouriteHeroScreenState extends State<FavouriteHeroScreen> {
                     itemBuilder: (_, i) {
                       final h = _heroes[i];
                       final on = _selected == h.id;
+                      final catalogHero = HeroCatalog.findByName(h.name);
+                      final imageUrl = catalogHero?.imageUrl ?? h.avatarUrl;
                       return GestureDetector(
                         onTap: () => setState(() => _selected = h.id),
                         child: Container(
@@ -90,12 +104,21 @@ class _FavouriteHeroScreenState extends State<FavouriteHeroScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              TfiPosterPlaceholder(
-                                kind: TfiPlaceholderKind.hero,
-                                title: h.name,
-                                width: 56,
-                                height: 56,
-                                borderRadius: BorderRadius.circular(999),
+                              Container(
+                                width: 76,
+                                height: 86,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: on ? const Color(0xFF1A0F00).withValues(alpha: 0.25) : TfiTokens.lineStrong),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: TfiNetworkImage(
+                                  url: imageUrl,
+                                  fit: BoxFit.cover,
+                                  borderRadius: BorderRadius.circular(14),
+                                  placeholderKind: TfiPlaceholderKind.hero,
+                                  placeholderTitle: h.name,
+                                ),
                               ),
                               const SizedBox(height: 10),
                               Text(

@@ -23,6 +23,7 @@ const remindersRoutes = require('./modules/reminders/reminders.routes');
 const searchRoutes = require('./modules/search/search.routes');
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
+const mediaRoutes = require('./modules/media/media.routes');
 const recController = require('./modules/recommendations/recommendations.controller');
 const { optionalAuth } = require('./middleware/auth.middleware');
 
@@ -73,6 +74,7 @@ app.use('/v1/reminders', remindersRoutes);
 app.use('/v1/search', searchRoutes);
 app.use('/v1/notifications', notificationsRoutes);
 app.use('/v1/recommendations', recommendationsRoutes);
+app.use('/v1/media', mediaRoutes);
 app.use('/v1/admin', adminRoutes);
 app.post('/v1/events', optionalAuth, recController.postEvent);
 

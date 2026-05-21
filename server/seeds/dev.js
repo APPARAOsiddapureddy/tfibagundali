@@ -2,26 +2,54 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const { pool } = require('../src/config/db');
 
 const HEROES = [
-  { name: 'Pawan Kalyan', telugu_name: 'పవన్ కళ్యాణ్', icon_emoji: '⚡', sort_order: 1 },
-  { name: 'Mahesh Babu', telugu_name: 'మహేష్ బాబు', icon_emoji: '👑', sort_order: 2 },
-  { name: 'Allu Arjun', telugu_name: 'అల్లు అర్జున్', icon_emoji: '🔥', sort_order: 3 },
-  { name: 'Ram Charan', telugu_name: 'రామ్ చరణ్', icon_emoji: '⚡', sort_order: 4 },
-  { name: 'Jr. NTR', telugu_name: 'జూనియర్ ఎన్టీఆర్', icon_emoji: '🌊', sort_order: 5 },
-  { name: 'Prabhas', telugu_name: 'ప్రభాస్', icon_emoji: '🐯', sort_order: 6 },
-  { name: 'Balakrishna', telugu_name: 'బాలకృష్ణ', icon_emoji: '🦅', sort_order: 7 },
-  { name: 'Chiranjeevi', telugu_name: 'చిరంజీవి', icon_emoji: '🌟', sort_order: 8 },
+  { name: 'Pawan Kalyan', telugu_name: 'పవన్ కళ్యాణ్', icon_emoji: '⚡', sort_order: 1, aliases: ['PSPK', 'Power Star'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/The_portrait_of_Pawan_Kalyan_(2024).jpg?width=512' },
+  { name: 'Mahesh Babu', telugu_name: 'మహేష్ బాబు', icon_emoji: '👑', sort_order: 2, aliases: ['Super Star'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Mahesh_Babu_in_Spyder_(cropped).jpg?width=512' },
+  { name: 'Allu Arjun', telugu_name: 'అల్లు అర్జున్', icon_emoji: '🔥', sort_order: 3, aliases: ['Bunny', 'Icon Star'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Allu_Arjun_at_Pushpa_2_The_Rule_meet.jpg?width=512' },
+  { name: 'Ram Charan', telugu_name: 'రామ్ చరణ్', icon_emoji: '⚡', sort_order: 4, aliases: ['Mega Power Star'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ram_Charan_2024_(cropped).jpg?width=512' },
+  { name: 'Jr NTR', telugu_name: 'జూనియర్ ఎన్టీఆర్', icon_emoji: '🐯', sort_order: 5, aliases: ['Jr. NTR', 'NTR Jr', 'N. T. Rama Rao Jr'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/N.T.Rama_Rao_Jr._at_the_RRR_Press_Meet_in_Chennai.jpg?width=512' },
+  { name: 'Prabhas', telugu_name: 'ప్రభాస్', icon_emoji: '🦁', sort_order: 6, aliases: ['Darling'], avatar_url: 'https://upload.wikimedia.org/wikipedia/commons/a/ad/Prabhas_at_Saaho_Pre_release_event_%28cropped%29.jpg' },
+  { name: 'Balakrishna', telugu_name: 'బాలకృష్ణ', icon_emoji: '💥', sort_order: 7, aliases: ['Nandamuri Balakrishna', 'Balayya', 'NBK'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Padma_Bhushan_Award_to_Shri_Nandamuri_Balakrishna_at_the_Rashtrapati_Bhavan_(cropped).jpg?width=512' },
+  { name: 'Chiranjeevi', telugu_name: 'చిరంజీవి', icon_emoji: '🌟', sort_order: 8, aliases: ['Mega Star'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Chiranjeevi_at_ANR_Awards_2024_(cropped).jpg?width=512' },
+  { name: 'Nani', telugu_name: 'నాని', icon_emoji: '🌿', sort_order: 9, aliases: ['Natural Star'], avatar_url: 'https://upload.wikimedia.org/wikipedia/commons/d/dc/Nani_%28cropped%29.png' },
+  { name: 'Vijay Deverakonda', telugu_name: 'విజయ్ దేవరకొండ', icon_emoji: '🕶️', sort_order: 10, aliases: ['Vijay Devarakonda', 'VD', 'Rowdy'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Vijay_Deverakonda_at_NOTA_pressmeet_(cropped).jpg?width=512' },
+  { name: 'Ravi Teja', telugu_name: 'రవితేజ', icon_emoji: '⚡', sort_order: 11, aliases: ['Mass Maharaja'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ravi_Teja_in_Dhamaka_promotions_2022_(cropped).png?width=512' },
+  { name: 'Nagarjuna', telugu_name: 'నాగార్జున', icon_emoji: '💎', sort_order: 12, aliases: ['Akkineni Nagarjuna', 'King'], avatar_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Nagarjuna_Akkineni_at_ANR_Awards.jpg' },
+  { name: 'Venkatesh', telugu_name: 'వెంకటేష్', icon_emoji: '🏆', sort_order: 13, aliases: ['Daggubati Venkatesh', 'Victory Venkatesh', 'Venky'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Daggubati_Venkatesh_(cropped).jpg?width=512' },
+  { name: 'Naga Chaitanya', telugu_name: 'నాగ చైతన్య', icon_emoji: '✨', sort_order: 14, aliases: ['Chay'], avatar_url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Naga_Chaitanya_(cropped).jpg?width=512' },
 ];
+
+const normalizeHeroName = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 async function seed() {
   console.log('🌱 Seeding TFI Bagundali v2...');
   const heroMap = {};
 
   for (const h of HEROES) {
-    const { rows } = await pool.query(
-      `INSERT INTO heroes (name, telugu_name, icon_emoji, sort_order, bio)
-       VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING id, name`,
-      [h.name, h.telugu_name, h.icon_emoji, h.sort_order, `${h.name} — Telugu cinema icon.`]
+    const keys = [h.name, ...h.aliases].map(normalizeHeroName);
+    let { rows } = await pool.query(
+      `SELECT id, name FROM heroes
+       WHERE regexp_replace(lower(name), '[^a-z0-9]+', '', 'g') = ANY($1::text[])
+       ORDER BY sort_order, created_at
+       LIMIT 1`,
+      [keys]
     );
+    if (rows[0]) {
+      rows = (await pool.query(
+        `UPDATE heroes
+         SET name = $2, telugu_name = $3, icon_emoji = $4, sort_order = $5,
+             bio = $6, aliases = $7::jsonb, avatar_url = $8, is_active = TRUE, updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, name`,
+        [rows[0].id, h.name, h.telugu_name, h.icon_emoji, h.sort_order, `${h.name} — Telugu cinema icon.`, JSON.stringify(h.aliases), h.avatar_url]
+      )).rows;
+    } else {
+      rows = (await pool.query(
+        `INSERT INTO heroes (name, telugu_name, icon_emoji, sort_order, bio, aliases, avatar_url)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
+         RETURNING id, name`,
+        [h.name, h.telugu_name, h.icon_emoji, h.sort_order, `${h.name} — Telugu cinema icon.`, JSON.stringify(h.aliases), h.avatar_url]
+      )).rows;
+    }
     if (rows[0]) heroMap[h.name] = rows[0].id;
   }
   if (!Object.keys(heroMap).length) {
@@ -32,7 +60,8 @@ async function seed() {
   const rcId = heroMap['Ram Charan'];
   const pkId = heroMap['Pawan Kalyan'];
   const aaId = heroMap['Allu Arjun'];
-  const ntrId = heroMap['Jr. NTR'];
+  const ntrId = heroMap['Jr NTR'];
+  const prabhasId = heroMap['Prabhas'];
 
   const { rows: peddiRows } = await pool.query(
     `INSERT INTO movies (title, title_telugu, hero_id, director, genre, release_date, status, synopsis)
@@ -49,7 +78,7 @@ async function seed() {
      ('Pushpa 3','పుష్ప 3',$2,'Sukumar','Mass Action','2026-08-15','upcoming'),
      ('Spirit','స్పిరిట్',$3,'Sandeep Reddy Vanga','Action','2026-09-01','upcoming')
      ON CONFLICT DO NOTHING`,
-    [ntrId, aaId, pkId]
+    [ntrId, aaId, prabhasId]
   );
 
   if (peddiId) {

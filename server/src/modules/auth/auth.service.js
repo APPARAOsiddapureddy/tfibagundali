@@ -18,7 +18,7 @@ function formatUser(u) {
     is_onboarded: onboarded,
     notification_preferences: u.notification_preferences || {},
     favourite_hero: u.hero_name
-      ? { id: u.favourite_hero_id, name: u.hero_name, telugu_name: u.hero_telugu, icon_emoji: u.icon_emoji }
+      ? { id: u.favourite_hero_id, name: u.hero_name, telugu_name: u.hero_telugu, icon_emoji: u.icon_emoji, avatar_url: u.hero_avatar_url }
       : null,
     created_at: u.created_at,
     updated_at: u.updated_at,
@@ -143,7 +143,7 @@ async function logout(userId, refreshToken) {
 
 async function getMe(userId) {
   const { rows } = await db.query(
-    `SELECT u.*, h.name as hero_name, h.telugu_name as hero_telugu, h.icon_emoji
+    `SELECT u.*, h.name as hero_name, h.telugu_name as hero_telugu, h.icon_emoji, h.avatar_url as hero_avatar_url
      FROM users u LEFT JOIN heroes h ON h.id = u.favourite_hero_id WHERE u.id = $1`,
     [userId]
   );

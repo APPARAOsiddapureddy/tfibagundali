@@ -168,17 +168,19 @@ class TFIUpdateModel {
 }
 
 class HeroRef {
-  HeroRef({this.id, required this.name, this.teluguName, this.iconEmoji});
+  HeroRef({this.id, required this.name, this.teluguName, this.iconEmoji, this.avatarUrl});
   final String? id;
   final String name;
   final String? teluguName;
   final String? iconEmoji;
+  final String? avatarUrl;
 
   factory HeroRef.fromJson(Map<String, dynamic> j) => HeroRef(
         id: j['id'] as String?,
         name: j['name'] as String? ?? '',
         teluguName: j['telugu_name'] as String?,
         iconEmoji: j['icon_emoji'] as String?,
+        avatarUrl: j['avatar_url'] as String?,
       );
 }
 
@@ -196,11 +198,12 @@ class MovieRef {
 }
 
 class HeroModel {
-  HeroModel({required this.id, required this.name, this.teluguName, this.iconEmoji, this.bio});
+  HeroModel({required this.id, required this.name, this.teluguName, this.iconEmoji, this.avatarUrl, this.bio});
   final String id;
   final String name;
   final String? teluguName;
   final String? iconEmoji;
+  final String? avatarUrl;
   final String? bio;
 
   factory HeroModel.fromJson(Map<String, dynamic> j) => HeroModel(
@@ -208,6 +211,7 @@ class HeroModel {
         name: j['name'] as String? ?? '',
         teluguName: j['telugu_name'] as String?,
         iconEmoji: j['icon_emoji'] as String?,
+        avatarUrl: j['avatar_url'] as String?,
         bio: j['bio'] as String?,
       );
 }

@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../core/config/api_config.dart';
 import '../core/theme/app_tokens.dart';
 import 'tfi_poster_placeholder.dart';
 
@@ -43,9 +45,24 @@ class TfiNetworkImage extends StatelessWidget {
         width: width,
         borderRadius: radius,
       );
+    } else if (_isAssetUrl) {
+      child = Image.asset(
+        _assetName,
+        height: height,
+        width: width,
+        fit: fit,
+        errorBuilder: (_, _, _) => TfiPosterPlaceholder(
+          kind: placeholderKind,
+          title: placeholderTitle,
+          subtitle: placeholderSubtitle,
+          height: height,
+          width: width,
+          borderRadius: radius,
+        ),
+      );
     } else {
       child = CachedNetworkImage(
-        imageUrl: url!,
+        imageUrl: _resolvedUrl,
         height: height,
         width: width,
         fit: fit,
@@ -85,6 +102,29 @@ class TfiNetworkImage extends StatelessWidget {
     }
 
     return child;
+  }
+
+  bool get _isAssetUrl {
+    if (!_hasUrl) return false;
+    final raw = url!.trim();
+    return raw.startsWith('assets/') || raw.startsWith('asset://');
+  }
+
+  String get _assetName {
+    final raw = url!.trim();
+    if (raw.startsWith('asset://')) return raw.substring('asset://'.length);
+    return raw;
+  }
+
+  String get _resolvedUrl {
+    final raw = url!.trim();
+    if (!kIsWeb) return raw;
+    final uri = Uri.tryParse(raw);
+    if (uri == null || !uri.hasScheme) return raw;
+    if (uri.host == 'commons.wikimedia.org' || uri.host == 'upload.wikimedia.org') {
+      return '$apiBaseUrl/media/image?url=${Uri.encodeComponent(raw)}';
+    }
+    return raw;
   }
 
   Widget _shimmer(BorderRadius radius) {

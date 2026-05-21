@@ -25,7 +25,22 @@ class ArmyInfo {
 }
 
 abstract final class ArmyData {
-  static const keys = ['power', 'bunny', 'charan', 'tiger', 'rebel', 'superstar', 'balayya', 'mega'];
+  static const keys = [
+    'power',
+    'bunny',
+    'charan',
+    'tiger',
+    'rebel',
+    'superstar',
+    'balayya',
+    'mega',
+    'natural',
+    'rowdy',
+    'massraja',
+    'king',
+    'venky',
+    'chay',
+  ];
 
   static const armies = {
     'power': ArmyInfo(
@@ -107,6 +122,66 @@ abstract final class ArmyData {
       color: Color(0xFFA855F7),
       gradient: LinearGradient(colors: [Color(0xFFD8B4FE), Color(0xFFA855F7), Color(0xFF581C87)]),
       points: 8200,
+    ),
+    'natural': ArmyInfo(
+      key: 'natural',
+      hero: 'Nani',
+      telugu: 'నాని',
+      army: 'Nani',
+      emoji: '🌿',
+      color: Color(0xFF22C55E),
+      gradient: LinearGradient(colors: [Color(0xFF86EFAC), Color(0xFF22C55E), Color(0xFF14532D)]),
+      points: 7900,
+    ),
+    'rowdy': ArmyInfo(
+      key: 'rowdy',
+      hero: 'Vijay Deverakonda',
+      telugu: 'విజయ్ దేవరకొండ',
+      army: 'Vijay Deverakonda',
+      emoji: '🕶️',
+      color: Color(0xFF14B8A6),
+      gradient: LinearGradient(colors: [Color(0xFF5EEAD4), Color(0xFF14B8A6), Color(0xFF134E4A)]),
+      points: 7100,
+    ),
+    'massraja': ArmyInfo(
+      key: 'massraja',
+      hero: 'Ravi Teja',
+      telugu: 'రవితేజ',
+      army: 'Ravi Teja',
+      emoji: '⚡',
+      color: Color(0xFFEAB308),
+      gradient: LinearGradient(colors: [Color(0xFFFDE68A), Color(0xFFEAB308), Color(0xFF854D0E)]),
+      points: 6400,
+    ),
+    'king': ArmyInfo(
+      key: 'king',
+      hero: 'Nagarjuna',
+      telugu: 'నాగార్జున',
+      army: 'Nagarjuna',
+      emoji: '💎',
+      color: Color(0xFF6366F1),
+      gradient: LinearGradient(colors: [Color(0xFFC4B5FD), Color(0xFF6366F1), Color(0xFF312E81)]),
+      points: 6100,
+    ),
+    'venky': ArmyInfo(
+      key: 'venky',
+      hero: 'Venkatesh',
+      telugu: 'వెంకటేష్',
+      army: 'Venkatesh',
+      emoji: '🏆',
+      color: Color(0xFF10B981),
+      gradient: LinearGradient(colors: [Color(0xFFA7F3D0), Color(0xFF10B981), Color(0xFF064E3B)]),
+      points: 5800,
+    ),
+    'chay': ArmyInfo(
+      key: 'chay',
+      hero: 'Naga Chaitanya',
+      telugu: 'నాగ చైతన్య',
+      army: 'Naga Chaitanya',
+      emoji: '✨',
+      color: Color(0xFFEC4899),
+      gradient: LinearGradient(colors: [Color(0xFFF9A8D4), Color(0xFFEC4899), Color(0xFF831843)]),
+      points: 5200,
     ),
   };
 
